@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://primebuild-pc.github.io/aula-win60he-tool/sitemap.xml

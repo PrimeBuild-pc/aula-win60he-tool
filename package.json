@@ -13,5 +13,27 @@
   },
   "devDependencies": {
     "vite": "^7.1.0"
-  }
+  },
+  "description": "Open source web driver (WebHID) for the AULA WIN 60 HE MAX Hall effect keyboard: Rapid Trigger, SOCD, key remapping, 8000 Hz polling.",
+  "keywords": [
+    "aula",
+    "aula-win60-he-max",
+    "hall-effect",
+    "magnetic-keyboard",
+    "rapid-trigger",
+    "socd",
+    "snap-tap",
+    "webhid",
+    "keyboard-configurator",
+    "web-driver"
+  ],
+  "homepage": "https://primebuild-pc.github.io/aula-win60he-tool/",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/PrimeBuild-pc/aula-win60he-tool.git"
+  },
+  "bugs": {
+    "url": "https://github.com/PrimeBuild-pc/aula-win60he-tool/issues"
+  },
+  "license": "MIT"
 }
