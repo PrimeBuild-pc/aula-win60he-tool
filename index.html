@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Web driver open source per la tastiera AULA WIN 60 HE MAX: rapid trigger, SOCD, mappatura tasti, 8 kHz. Funziona nel browser con WebHID." />
+    <title>WIN60 HE Studio</title>
+    <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="./src/style.css" />
+  </head>
+  <body>
+    <div id="bootError" class="boot-error" hidden></div>
+
+    <div class="app">
+      <aside class="sidebar">
+        <div class="brand">
+          <img src="./favicon.svg" alt="" width="32" height="32" />
+          <div>
+            <strong>WIN60 HE Studio</strong>
+            <span>web driver · beta</span>
+          </div>
+        </div>
+
+        <nav class="nav" id="nav">
+          <button data-view="overview" class="active"><span class="ico">◎</span>Panoramica</button>
+          <button data-view="keymap"><span class="ico">⌨</span>Mappatura</button>
+          <button data-view="perf"><span class="ico">⇅</span>Prestazioni</button>
+          <button data-view="socd"><span class="ico">⇄</span>SOCD</button>
+          <button data-view="test"><span class="ico">◉</span>Test tasti</button>
+          <button data-view="backup"><span class="ico">⇩</span>Backup</button>
+          <button data-view="log"><span class="ico">≡</span>Log</button>
+        </nav>
+
+        <div class="device-pill">
+          <div id="status" class="status status--idle">Non connesso</div>
+          <button id="btnConnect" class="primary block">Connetti tastiera</button>
+        </div>
+      </aside>
+
+      <main class="content">
+        <!-- Panoramica -->
+        <section class="view active" data-view="overview">
+          <header class="view-head">
+            <h1>Panoramica</h1>
+            <p>Stato della tastiera e profilo competitivo in un clic.</p>
+          </header>
+
+          <div id="notSupported" class="banner banner--err" hidden>
+            WebHID non è disponibile in questo browser. Usa Chrome o Edge su desktop.
+          </div>
+
+          <div class="stats" id="stats">
+            <div class="stat"><span>Polling</span><strong id="statRate">—</strong></div>
+            <div class="stat"><span>Rapid Trigger</span><strong id="statRt">—</strong></div>
+            <div class="stat"><span>SOCD</span><strong id="statSocd">—</strong></div>
+            <div class="stat"><span>Protocollo</span><strong id="statProto">—</strong></div>
+          </div>
+
+          <div class="grid2">
+            <article class="card">
+              <h2>Profilo FPS competitivo</h2>
+              <p class="hint">
+                Applica a tutti i tasti: Rapid Trigger, attuazione bassa, SOCD su A/D (l'ultimo premuto vince),
+                frecce sul layer Fn e polling 8 kHz.
+              </p>
+              <div class="fields">
+                <label>Attuazione (mm)<input id="pfAct" type="number" min="0.1" max="3.4" step="0.05" value="0.5" /></label>
+                <label>Sensibilità RT (mm)<input id="pfRt" type="number" min="0.01" max="2" step="0.01" value="0.15" /></label>
+              </div>
+              <button id="btnProfile" class="primary" data-needs-device>Applica profilo FPS</button>
+              <div class="progress" id="pfProgress" hidden><div></div></div>
+            </article>
+
+            <article class="card">
+              <h2>Polling rate</h2>
+              <p class="hint">8 kHz richiede una porta USB diretta sul PC, senza hub.</p>
+              <div class="seg" id="rateSeg"></div>
+              <h2 class="mt">Frecce sul layer Fn</h2>
+              <p class="hint">
+                Ripristina WASD come lettere e mette le frecce su Fn+W/A/S/D e su Fn + <kbd>/</kbd> <kbd>Alt dx</kbd>
+                <kbd>Menu</kbd> <kbd>Ctrl dx</kbd>.
+              </p>
+              <button id="btnFixFn" data-needs-device>Imposta frecce Fn</button>
+            </article>
+          </div>
+
+          <article class="card">
+            <h2>Layer attivo</h2>
+            <p class="hint">Rosso: tasti con SOCD. Verde: Rapid Trigger attivo.</p>
+            <div class="kbd-wrap"><div class="kbd" id="kbdOverview"></div></div>
+          </article>
+        </section>
+
+        <!-- Mappatura -->
+        <section class="view" data-view="keymap">
+          <header class="view-head">
+            <h1>Mappatura tasti</h1>
+            <p>Clicca un tasto, scegli la nuova funzione, applica. Le modifiche restano salvate sulla tastiera.</p>
+          </header>
+          <article class="card">
+            <div class="toolbar">
+              <div class="seg" id="layerSeg">
+                <button data-layer="0" class="active">Layer base</button>
+                <button data-layer="1">Layer Fn</button>
+              </div>
+            </div>
+            <div class="kbd-wrap"><div class="kbd" id="kbdMap"></div></div>
+          </article>
+          <article class="card" id="mapEditor" hidden>
+            <h2>Tasto <span id="mapKeyName"></span></h2>
+            <p class="hint" id="mapCurrent"></p>
+            <div class="fields">
+              <label>Nuova funzione<select id="mapTarget"></select></label>
+            </div>
+            <div class="row">
+              <button id="btnMapApply" class="primary" data-needs-device>Applica</button>
+              <button id="btnMapDefault" data-needs-device>Predefinito</button>
+            </div>
+            <p class="hint warn" id="mapSocdWarn" hidden>
+              Questo tasto ha il SOCD attivo: il firmware ignora il layer Fn su di esso.
+            </p>
+          </article>
+        </section>
+
+        <!-- Prestazioni -->
+        <section class="view" data-view="perf">
+          <header class="view-head">
+            <h1>Prestazioni</h1>
+            <p>Seleziona uno o più tasti e imposta attuazione e Rapid Trigger.</p>
+          </header>
+          <article class="card">
+            <div class="toolbar">
+              <div class="row">
+                <button data-select="all">Tutti</button>
+                <button data-select="wasd">WASD</button>
+                <button data-select="none">Nessuno</button>
+              </div>
+              <span class="hint" id="perfSelCount">0 tasti selezionati</span>
+            </div>
+            <div class="kbd-wrap"><div class="kbd" id="kbdPerf"></div></div>
+          </article>
+          <article class="card">
+            <div class="grid2">
+              <div>
+                <h2>Impostazioni</h2>
+                <div class="fields">
+                  <label>Modalità
+                    <select id="perfMode">
+                      <option value="rt">Rapid Trigger</option>
+                      <option value="single">Attuazione fissa</option>
+                    </select>
+                  </label>
+                  <label>Attuazione (mm) <output id="oAct"></output><input id="perfAct" type="range" min="0.1" max="3.4" step="0.05" value="0.5" /></label>
+                  <label>RT pressione (mm) <output id="oRtp"></output><input id="perfRtp" type="range" min="0.01" max="2" step="0.01" value="0.15" /></label>
+                  <label>RT rilascio (mm) <output id="oRtr"></output><input id="perfRtr" type="range" min="0.01" max="2" step="0.01" value="0.15" /></label>
+                  <label>Zona morta alta (mm) <output id="oDp"></output><input id="perfDp" type="range" min="0" max="1" step="0.01" value="0.15" /></label>
+                  <label>Zona morta bassa (mm) <output id="oDr"></output><input id="perfDr" type="range" min="0" max="1" step="0.01" value="0.15" /></label>
+                </div>
+                <button id="btnPerfApply" class="primary" data-needs-device>Applica ai tasti selezionati</button>
+                <div class="progress" id="perfProgress" hidden><div></div></div>
+              </div>
+              <div>
+                <h2>Anteprima corsa</h2>
+                <svg id="perfDiagram" viewBox="0 0 220 260" class="diagram" aria-label="Schema della corsa del tasto"></svg>
+                <p class="hint" id="perfReadout">Clicca un solo tasto per leggerne i valori attuali.</p>
+              </div>
+            </div>
+          </article>
+        </section>
+
+        <!-- SOCD -->
+        <section class="view" data-view="socd">
+          <header class="view-head">
+            <h1>SOCD su A / D</h1>
+            <p>Gestisce cosa succede quando A e D sono premuti insieme. Utile per lo strafe negli FPS.</p>
+          </header>
+          <article class="card">
+            <div class="socd-pair">
+              <div class="cap big">A</div><span>⇄</span><div class="cap big">D</div>
+            </div>
+            <div class="seg vertical" id="socdSeg">
+              <button data-mode="0" class="active"><strong>Ultimo premuto vince</strong><span>Consigliato per Counter-Strike, Valorant e simili</span></button>
+              <button data-mode="1"><strong>Priorità ad A</strong><span>Con entrambi premuti vale A</span></button>
+              <button data-mode="2"><strong>Priorità a D</strong><span>Con entrambi premuti vale D</span></button>
+              <button data-mode="3"><strong>Neutro</strong><span>Con entrambi premuti non esce nulla</span></button>
+            </div>
+            <div class="row">
+              <button id="btnSocdApply" class="primary" data-needs-device>Attiva SOCD</button>
+              <button id="btnSocdRemove" data-needs-device>Disattiva</button>
+            </div>
+            <p class="hint warn">
+              Limite del firmware: sui tasti con SOCD il layer Fn viene ignorato, quindi Fn+A/D non danno le frecce.
+              Usa Fn + Alt dx / Ctrl dx per sinistra/destra.
+            </p>
+          </article>
+        </section>
+
+        <!-- Test -->
+        <section class="view" data-view="test">
+          <header class="view-head">
+            <h1>Test tasti</h1>
+            <p>Corsa in tempo reale letta dai sensori magnetici, più il test di cosa arriva al PC.</p>
+          </header>
+          <div class="grid2">
+            <article class="card">
+              <h2>Rapid Trigger dal vivo <span class="tag">beta</span></h2>
+              <div class="live">
+                <div class="scene"><div class="cap3d" id="cap3d"><span id="capLabel">W</span></div></div>
+                <div class="gauge" id="gauge">
+                  <div class="gauge-fill" id="gaugeFill"></div>
+                  <div class="gauge-line" id="gaugeAct" title="Attuazione"></div>
+                </div>
+                <div class="live-num"><strong id="liveMm">0.00</strong><span>mm</span><em id="liveState">rilasciato</em></div>
+              </div>
+              <canvas id="trace" width="640" height="160" class="trace"></canvas>
+              <div class="row">
+                <button id="btnLive" class="primary" data-needs-device>Avvia lettura</button>
+                <span class="hint">Clicca un tasto qui sotto per seguirlo.</span>
+              </div>
+            </article>
+            <article class="card">
+              <h2>Cosa riceve il PC</h2>
+              <p class="hint">Premi i tasti: si accendono quelli che arrivano a Windows (anche le frecce del layer Fn).</p>
+              <div class="pressed" id="pressed"></div>
+              <pre id="keyLog" class="pre pre--small"></pre>
+            </article>
+          </div>
+          <article class="card">
+            <div class="kbd-wrap"><div class="kbd" id="kbdTest"></div></div>
+          </article>
+        </section>
+
+        <!-- Backup -->
+        <section class="view" data-view="backup">
+          <header class="view-head">
+            <h1>Backup</h1>
+            <p>Salva layer e prestazioni in un file JSON e ripristinali quando vuoi.</p>
+          </header>
+          <article class="card">
+            <div class="row">
+              <button id="btnBackup" class="primary" data-needs-device>Scarica backup</button>
+              <label class="file"><span>Carica backup</span><input id="fileBackup" type="file" accept="application/json" /></label>
+              <button id="btnRestore" disabled>Ripristina</button>
+            </div>
+            <p class="hint">Il backup non contiene la configurazione SOCD: dopo un ripristino riattivala dalla sezione SOCD.</p>
+          </article>
+        </section>
+
+        <!-- Log -->
+        <section class="view" data-view="log">
+          <header class="view-head">
+            <h1>Log</h1>
+            <p>Tutti i comandi inviati e le risposte della tastiera.</p>
+          </header>
+          <article class="card">
+            <pre id="log" class="pre pre--log"></pre>
+          </article>
+        </section>
+      </main>
+    </div>
+
+    <div class="toast" id="toast" hidden></div>
+
+    <script>
+      window.__aulaBooted = false;
+      function showBootError(message) {
+        var el = document.getElementById('bootError');
+        if (!el) return;
+        el.hidden = false;
+        el.textContent = message;
+      }
+      window.addEventListener('error', function (event) {
+        showBootError('Errore JavaScript: ' + (event.message || String(event.error || 'sconosciuto')));
+      });
+      setTimeout(function () {
+        if (!window.__aulaBooted) showBootError('Il modulo JS non si è avviato. Ricarica con Ctrl+Shift+R.');
+      }, 4000);
+    </script>
+    <script type="module" src="./src/main.js"></script>
+  </body>
+</html>
