@@ -1,6 +1,6 @@
 import { KEY_GROUPS, keyLabel, physicalLabel, CODE_TO_HID } from './keycodes.js';
 import { DEFAULT_LIGHT, LIGHT_EFFECTS, rgbFromHex } from './settings.js';
-import { initLanguage } from './i18n.js';
+import { initLanguage, translate } from './i18n.js';
 import { initAdvancedEditor } from './advanced-ui.js';
 
 const $ = id => document.getElementById(id);
@@ -76,7 +76,7 @@ export function initWorkspace({ aula, ui, task, toast, log, renderAll, drawKeybo
 
   // Mapping: searchable functions, category filters, physical key capture and draft feedback.
   let category = 'Tutte';
-  const aliases = { Navigazione: 'frecce arrows arrow left right up down insert delete home end pagina', Media: 'volume audio musica play pause mute', Modificatori: 'ctrl shift alt win control', Controllo: 'invio spazio esc escape canc backspace enter space', Funzione: 'function funzione' };
+  const aliases = { Navigazione: 'frecce arrows arrow left right up down insert delete home end pagina flechas izquierda derecha arriba abajo стрелка влево вправо вверх вниз 矢印 左 右 上 下', Media: 'volume audio musica play pause mute volumen sonido громкость звук 音量 音声', Modificatori: 'ctrl shift alt win control modificador модификатор 修飾', Controllo: 'invio spazio esc escape canc backspace enter space espacio пробел ввод スペース 改行', Funzione: 'function funzione función функция ファンクション' };
   for (const group of ['Tutte', ...Object.keys(KEY_GROUPS)]) {
     const b = document.createElement('button');
     b.textContent = group;
@@ -94,7 +94,7 @@ export function initWorkspace({ aula, ui, task, toast, log, renderAll, drawKeybo
     for (const [group, codes] of Object.entries(KEY_GROUPS)) {
       if (category !== 'Tutte' && category !== group) continue;
       for (const [code, name] of Object.entries(codes)) {
-        if (search && !`${name} ${group} ${aliases[group] || ''}`.toLowerCase().includes(search)) continue;
+        if (search && !`${name} ${group} ${translate(group, $('languageSelect').value)} ${aliases[group] || ''}`.toLowerCase().includes(search)) continue;
         const b = document.createElement('button');
         b.textContent = name === '—' ? 'Nessuna' : name;
         b.className = 'function-key';
@@ -119,6 +119,7 @@ export function initWorkspace({ aula, ui, task, toast, log, renderAll, drawKeybo
   }
   document.addEventListener('studio:map', () => { cancelCapture(); updateMapPreview(); renderFunctions(); });
   $('mapSearch').addEventListener('input', renderFunctions);
+  document.addEventListener('studio:language', renderFunctions);
   $('mapTarget').addEventListener('change', () => { updateMapPreview(); renderFunctions(); });
   let captureTimer;
   function cancelCapture() {

@@ -1,0 +1,44 @@
+name: Bug report
+description: Report a reproducible keyboard, interface or connection problem.
+title: "[Bug]: "
+body:
+  - type: markdown
+    attributes:
+      value: "Please write in English. Separate software messages from the physical keyboard result. Do not post personal data or firmware binaries."
+  - type: input
+    id: device
+    attributes:
+      label: Keyboard model and USB IDs
+      placeholder: "AULA WIN 60 HE MAX, VID 1CA2, PID 1902"
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Browser, operating system and app version
+      placeholder: "Chrome version, Windows/macOS/Linux version, Studio version"
+    validations:
+      required: true
+  - type: input
+    id: firmware
+    attributes:
+      label: Firmware and protocol, if available
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: "Include the selected profile, keys, mode and values."
+    validations:
+      required: true
+  - type: textarea
+    id: result
+    attributes:
+      label: Expected result and actual physical result
+      description: "What did the UI report, and what did the keyboard actually do?"
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Relevant diagnostics or screenshots
+      description: "Review excerpts for personal information before posting."

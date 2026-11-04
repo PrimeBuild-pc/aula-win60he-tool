@@ -1,205 +1,142 @@
 <p align="center">
-  <img src="docs/banner.svg" alt="WIN60 HE Studio - open source web driver for the AULA WIN 60 HE MAX Hall effect keyboard" width="100%" />
+  <img src="docs/banner.svg" alt="WIN60 HE Studio, a browser configurator for the AULA WIN 60 HE MAX magnetic keyboard" width="100%" />
 </p>
 
-<h1 align="center">WIN60 HE Studio</h1>
+# AULA WIN 60 HE MAX Web Driver — WIN60 HE Studio
 
-<p align="center">
-  <b>Open source web driver and configurator for the AULA WIN 60 HE MAX magnetic (Hall effect) keyboard.</b><br />
-  Rapid Trigger, SOCD (snap tap), key remapping and 8000 Hz polling, straight from your browser via WebHID.<br />
-  No installer, no executable, nothing to download.
-</p>
+**A free, open source keyboard configurator for the AULA WIN 60 HE MAX Hall effect keyboard.** Configure Rapid Trigger, RGB lighting, SOCD, key remapping and 8000 Hz polling in your browser using WebHID. No desktop application or installer required.
 
-<p align="center">
-  <a href="https://primebuild-pc.github.io/aula-win60he-tool/"><img alt="Open the web driver" src="https://img.shields.io/badge/Open%20the%20web%20driver-5eead4?style=for-the-badge&labelColor=0a0c10" /></a>
-  <img alt="Status: beta 0.3.0" src="https://img.shields.io/badge/status-beta%200.3.0-fbbf24?style=for-the-badge&labelColor=0a0c10" />
-  <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-60a5fa?style=for-the-badge&labelColor=0a0c10" /></a>
-  <img alt="WebHID" src="https://img.shields.io/badge/WebHID-Chrome%20%7C%20Edge-e9eef5?style=for-the-badge&labelColor=0a0c10" />
-</p>
+The keyboard is also commonly written as **AULA WIN60 HE MAX**. This project supports the specific USB device listed below; it is an independent alternative interface, not an official AULA driver or a firmware download.
 
----
+**[Open the web driver](https://primebuild-pc.github.io/aula-win60he-tool/)** · **[Read the user guide](https://primebuild-pc.github.io/aula-win60he-tool/guide/)** · **[Report a problem](https://github.com/PrimeBuild-pc/aula-win60he-tool/issues/new?template=bug_report.yml)**
 
-## Why
+[![Build, test and deploy](https://github.com/PrimeBuild-pc/aula-win60he-tool/actions/workflows/pages.yml/badge.svg)](https://github.com/PrimeBuild-pc/aula-win60he-tool/actions/workflows/pages.yml)
+[![MIT license](https://img.shields.io/badge/license-MIT-60a5fa)](LICENSE)
+![Desktop Chrome and Edge](https://img.shields.io/badge/browser-Chrome%20%7C%20Edge-5eead4)
+![Languages: English, Italian, Russian, Spanish, Japanese](https://img.shields.io/badge/languages-EN%20IT%20RU%20ES%20JA-a78bfa)
 
-The official AULA web driver is still rough, and some features ask you to download a desktop app that Chrome flags
-as dangerous. WIN60 HE Studio talks to the keyboard with the same protocol as the official driver (SparkLink KB2),
-but **every write is read back and verified** and commands are sent **one at a time**, so settings never get mixed up.
+## Start in one minute
 
-It was built to fix a real problem: a broken Fn layer and A/D keys that stopped typing after using the official
-software. If your AULA WIN 60 HE MAX has keys that send arrows instead of letters, this tool fixes it in one click.
+1. Connect your **AULA WIN 60 HE MAX** directly to a USB port on your computer.
+2. Open **[WIN60 HE Studio](https://primebuild-pc.github.io/aula-win60he-tool/)** in desktop **Chrome or Edge**. Close other keyboard-driver tabs first.
+3. Press **Connect your keyboard** on the welcome screen and select `WIN 60 HE MAX` in the browser device picker.
+4. Open **Backup** and download your current setup before making large changes.
+5. Choose a section, edit your settings and press its **Apply** or **Save** button.
 
-## Features
+The interface follows your browser language when supported. You can choose **English, Italiano, Русский, Español or 日本語** and a light, dark or system theme in the workspace. Your language and theme are remembered in this browser.
 
-### New in 0.3.0
+Configuration becomes available after a successful connection and device read. Settings are written to the keyboard through the firmware; editing a local draft alone does not save it. The connection screen returns if the USB connection is lost.
 
-- **Connect-first welcome screen:** a single Connect action, a floating keyboard illustration and a clear USB/browser explanation. Configuration becomes available only after the keyboard has been read. Disconnecting returns to the welcome screen.
-- **RGB fixed for the actual firmware:** brightness and speed use levels 0–4, palette slots are zero-based, slot 7 is rainbow, and custom mode is activated before per-key colors are sent. Color writes are read back after persistence. Choosing a color from zero brightness restores visible brightness.
-- **Advanced key catalog:** Mod-Tap, Toggle, four-action DKS with editable activation phases, three-depth MPT, END (release action), Rappy Snappy and macro recording/import/export/binding.
-- **Device controls:** global actuation, Super Response, Windows/macOS mode, onboard profiles and guided calibration.
-- **Real browser/SDK tests:** connection, settings, backup and disconnection run through a WebHID boundary emulator rather than bypassing the production SDK. The RGB browser flow has also been exercised against the connected WIN60 HE MAX over a local USB transport, with the original RGB configuration restored afterward.
-- Light/dark/system themes, Italian/English, searchable mapping and validated backup v4 remain available.
+## What you can configure
 
-**Macro limitation:** SDK 1.0.24 uses a shared staging buffer. Studio permits one assigned sequence per profile and blocks an assignment that could overwrite another binding. Sequences recorded/imported in Studio are retained locally and included in backups; externally created macros require their original sequence file. Binding readback verifies metadata, not physical macro playback.
+| Feature | Controls |
+| --- | --- |
+| **Rapid Trigger** | Per-key press/release sensitivity, actuation point and top/bottom dead zones |
+| **Actuation** | Fixed per-key actuation or shared global actuation |
+| **RGB lighting** | Static colors, 20 firmware effects, rainbow palette, brightness, speed, direction, per-key colors and RGB off |
+| **Key remapping** | Searchable keys, function/media keys, physical key capture, base layer and Fn layer |
+| **SOCD / Snap Tap-style input** | A/D and W/S pairs; last input, first-key priority, second-key priority or neutral |
+| **Dynamic Keystroke (DKS)** | Up to four actions with editable press/release activation phases |
+| **Multi-Point Trigger (MPT)** | Three actions at three increasing key depths |
+| **Mod-Tap and Toggle** | Separate tap/hold actions or a latched key |
+| **END / release action** | An action when the key is released |
+| **Rappy Snappy** | A pair in which the more deeply pressed key takes priority |
+| **Macros** | Record or import a sequence, edit delays, export JSON and assign playback behavior |
+| **Polling rate** | 125 Hz to 8000 Hz, subject to the keyboard and USB connection |
+| **Device settings** | Onboard profiles when reported by the device, Super Response, Windows/macOS mode and guided calibration |
+| **Testing and backup** | Live magnetic-sensor travel, received-key tester, validated JSON backup/restore and diagnostic log |
 
-Firmware flashing remains unavailable. See [release notes and handoff](docs/RELEASE-0.3.0.md) for verification evidence and remaining hardware checks.
-
-<table>
-  <tr>
-    <td width="50%" valign="top">
-      <h3>⇅ Rapid Trigger and actuation</h3>
-      Rapid Trigger on any key, actuation point from 0.1 to 3.4 mm, separate press and release sensitivity,
-      top and bottom dead zones, with a live preview of the key travel.
-    </td>
-    <td width="50%" valign="top">
-      <h3>⇄ SOCD / snap tap</h3>
-      Simultaneous Opposing Cardinal Directions on A/D: last input wins, A priority, D priority, or neutral.
-      Written in the exact format used by the official driver.
-    </td>
-  </tr>
-  <tr>
-    <td valign="top">
-      <h3>⌨ Key remapping</h3>
-      Remap every key on the base layer and on the Fn layer: letters, F-keys, navigation, modifiers and media keys.
-    </td>
-    <td valign="top">
-      <h3>◉ Key tester and travel visualizer</h3>
-      A 3D keycap that follows the real travel read from the magnetic sensors (beta), a travel graph over time,
-      and a tester that shows exactly what reaches the operating system.
-    </td>
-  </tr>
-  <tr>
-    <td valign="top">
-      <h3>◎ One-click FPS profile</h3>
-      Rapid Trigger on every key, SOCD on A/D, arrow keys on the Fn layer and 8 kHz polling, tuned for competitive
-      shooters like Counter-Strike 2, Valorant and Apex Legends.
-    </td>
-    <td valign="top">
-      <h3>⇩ Backup and restore</h3>
-      Save layers, per-key performance, SOCD pairs, RGB and supported advanced key settings to a JSON file.
-    </td>
-  </tr>
-</table>
-
-## Quick start
-
-1. Open **[the web driver](https://primebuild-pc.github.io/aula-win60he-tool/)** in **Chrome** or **Edge** on desktop.
-2. Plug the keyboard in with the cable, ideally into a USB port directly on the PC (no hub; this matters for 8 kHz).
-3. Close any other tab running the AULA driver, click **Connetti tastiera** (Connect keyboard) and pick `WIN 60 HE MAX`.
-4. From **Panoramica** (Overview) apply the FPS profile, or tune everything by hand in the other sections.
-
-Settings are stored in the keyboard's own memory: they stay when you unplug it or move it to another computer.
-
-> [!NOTE]
-> Connect the keyboard from the welcome screen first. Then choose Italian or English and light, dark or system theme in the workspace top bar.
-
-### Default FPS profile
-
-| Setting | Value |
-|---|---|
-| Actuation point | 0.5 mm on every key |
-| Rapid Trigger | 0.15 mm press and release |
-| Dead zones | 0.15 mm top and bottom |
-| SOCD | A/D, last input wins |
-| Polling rate | 8000 Hz |
-| Arrow keys | Fn + W/A/S/D and Fn + <kbd>/</kbd> <kbd>Right Alt</kbd> <kbd>Menu</kbd> <kbd>Right Ctrl</kbd> |
-
-> [!IMPORTANT]
-> **Firmware limitation:** the firmware ignores the Fn layer on keys that have SOCD enabled, so Fn+A and Fn+D cannot
-> send arrows while SOCD is on. Use Fn + Right Alt and Fn + Right Ctrl for left and right (Wooting-style layout).
+These are keyboard settings, not firmware flashing. Device capabilities are checked during connection; unsupported controls remain disabled.
 
 ## Compatibility
 
-| | |
-|---|---|
-| Keyboard | AULA WIN 60 HE MAX (USB `1CA2:1902`, vendor interface `FFA0:0001`) |
-| Verified protocol | 1.0.9 |
-| Browsers | Chrome and Edge on desktop (WebHID). Firefox and Safari do not support WebHID. |
-| Operating systems | Windows, macOS, Linux (Linux may need a udev rule for HID access) |
+| Requirement | Supported configuration |
+| --- | --- |
+| Keyboard | **AULA WIN 60 HE MAX** |
+| USB identification | Vendor `1CA2`, product `1902`; vendor interface `FFA0:0001` |
+| Verified protocol | SparkLink KB2 **1.0.9**, SDK **1.0.24** |
+| Browser | Desktop Chrome or Edge with WebHID |
+| Connection | USB cable; a direct port is recommended for 8 kHz |
+| Host OS | Windows, macOS or Linux with a compatible WebHID browser and HID permissions |
 
-Other AULA keyboards built on the same SparkLink chip may work, but they have not been tested. Reports are welcome
-in the [issues](https://github.com/PrimeBuild-pc/aula-win60he-tool/issues).
+Firefox and Safari do not provide the WebHID interface used here. A mobile browser is not a supported configuration environment. Linux may require a device-specific HID permission rule.
 
-## FAQ
+**WIN60 HE, WIN68 HE and other AULA models are not interchangeable compatibility claims.** A similar name or controller does not establish compatibility. Please include the exact product name and USB IDs when reporting another model.
 
-<details>
-<summary><b>The A and D keys (or WASD) type nothing or send arrows. How do I fix it?</b></summary>
+## Verification and current limits
 
-The keyboard's base layer has arrow codes written on those keys, usually after a bad write from another tool.
-Connect, then click **Imposta frecce Fn** (Set Fn arrows) in the Overview: it restores W/A/S/D as letters on the base
-layer and puts the arrows on the Fn layer.
-</details>
+- **Real keyboard RGB checks:** static RGB and per-key custom RGB completed USB write/readback/restore cycles on a WIN 60 HE MAX. The application-to-SDK-to-USB RGB path was also exercised. The owner subsequently confirmed that lighting could be changed from the web app.
+- **Software checks:** unit tests validate settings, backup boundaries and SDK packets. Browser tests use the production application and SDK with an emulated WebHID boundary. They cover connection, navigation, mapping, RGB, advanced settings, languages, themes, accessibility and responsive layouts.
+- **Advanced modes:** software coverage is not a physical timing or behavior certification. DKS, MPT, END, macro playback and other performance/device operations still require behavioral validation on the keyboard.
+- **Macros:** one assigned sequence per hardware profile, up to **64 events**. The SDK shares a staging buffer; Studio blocks assignments that could overwrite another binding. Binding metadata is read back, but macro event contents are retained locally rather than read from the keyboard. Export the original JSON. A backup cannot reconstruct an unknown sequence created in another driver.
+- **Fn and SOCD:** this firmware ignores the Fn layer on SOCD-enabled keys. For left/right arrows while A/D SOCD is active, use **Fn + Right Alt / Right Ctrl** instead of Fn+A/D.
+- **Firmware updates:** unavailable. A verified official image, bootloader identification and recovery procedure are required before flashing can be offered.
 
-<details>
-<summary><b>Is it safe? Does it flash firmware?</b></summary>
+See the [release notes](docs/RELEASE-0.4.0.md) and [hardware verification notes](docs/RELEASE-0.3.0.md) for the scope of each check. This is beta software: keep a backup of a working setup.
 
-No firmware is flashed or modified. The tool only writes settings, using the same commands as the official driver,
-and verifies each one. Download a backup before making large changes.
-</details>
+## Common questions
 
-<details>
-<summary><b>Is 8000 Hz polling really active?</b></summary>
+### How do I change RGB lighting on the AULA WIN60 HE MAX?
 
-The Overview reads the current polling rate straight from the keyboard. 8 kHz needs a direct USB port; through a
-hub or a front-panel port it may fall back to a lower rate.
-</details>
+Connect the keyboard, open **RGB lighting**, choose a static color or effect and press **Apply lighting**. To color individual keys, select them in the preview, choose a color, press **Paint selection**, then apply. The preview is a draft; firmware controls the actual animation.
 
-<details>
-<summary><b>Why a web driver and not a desktop app?</b></summary>
+Brightness and speed have **five firmware levels, 0–4**. Brightness 0 is dark; choosing a color or effect from that state restores a visible level. Palette slots are 0–6, and slot 7 selects rainbow.
 
-WebHID runs inside the browser sandbox: nothing to install, no admin rights, no unsigned executable, and the code is
-fully open for anyone to review.
-</details>
+### How do I enable Rapid Trigger or change the actuation point?
 
-## Local development
+Open **Performance**, select the keys and choose the desired mode. Set the actuation, Rapid Trigger sensitivity and dead zones, then apply to the selection. The **FPS profile** in Overview applies a predefined setup across the keyboard; review its values in the [user guide](docs/USER_GUIDE.md#fps-profile).
+
+### Why do A/D or WASD send arrows instead of letters?
+
+The base layer may contain arrow assignments. **Set Fn arrows** in Overview restores W/A/S/D as letters and places arrows on the Fn layer. If SOCD is enabled, its firmware interaction with Fn still applies. See [troubleshooting](docs/TROUBLESHOOTING.md#wasd-or-ad-type-arrows-or-stop-typing).
+
+### Is this the official AULA software? Does it install a driver?
+
+No. It is an independent open source web interface using the SparkLink keyboard SDK. The browser asks you to select a USB device. No Windows driver package, executable or firmware image is installed by this project.
+
+### Does it work with other AULA magnetic keyboards?
+
+Only the exact **WIN 60 HE MAX `1CA2:1902`** configuration above is the current target. Please do not flash or assume support for another model based on its name.
+
+### Are SOCD and macros allowed in my game?
+
+Check your game and tournament rules before enabling automated input. Availability in the keyboard firmware does not imply permission in a game or competition.
+
+## Documentation
+
+All project documentation is maintained in **English**. Interface translations are separate from the documentation.
+
+- [Documentation index](docs/README.md)
+- [User guide](docs/USER_GUIDE.md) — connection, mapping, lighting, performance, advanced actions and backups
+- [Troubleshooting](docs/TROUBLESHOOTING.md) — USB, RGB, Fn/SOCD and macro issues
+- [Development and protocol notes](docs/DEVELOPMENT.md) — local setup, tests, architecture, localization and deployment
+- [Contributing](CONTRIBUTING.md) — reproducible reports, translations and hardware changes
+- [0.4.0 release notes](docs/RELEASE-0.4.0.md)
+
+## Run locally
+
+Requires a maintained Node.js version compatible with Vite 7; CI uses **Node.js 22**.
 
 ```bash
-npm install
+npm ci
 npm run dev
 ```
 
-Then open `http://127.0.0.1:5199` in Chrome. On Windows you can also double-click `start.cmd`.
-
-```text
-src/aula.js       keyboard protocol layer (connect, read, write, verify)
-src/keycodes.js   HID key codes, labels and physical layout
-src/main.js       user interface
-src/workspace.js  RGB, mapping tools, profiles and calibration
-src/settings.js   settings and backup validation, trigger display model
-src/i18n.js       Italian / English interface
-src/advanced.js   advanced action and macro validation
-src/advanced-ui.js DKS phases, MPT and macro editor
-src/style.css     styles (dark and light theme)
-```
-
-<details>
-<summary><b>Protocol notes</b></summary>
-
-- SDK: `@sparklinkplayjoy/sdk-keyboard` (KB2 protocol, same as the AULA web driver). A `SYNCPack` must be sent after `init()`.
-- Layers: `layout 0` is the base layer, `layout 1` is the Fn layer, `2-3` are unused. `getLayoutKeyInfo` returns `{key, layout, value}`; about 15 keys fit in one 64-byte packet.
-- Key codes are standard HID usages. Media keys are `0x1000 | consumer usage` (e.g. `0x10EA` volume down), `0xF001` is Fn, `0xF3xx` are vendor functions.
-- Performance: `Layout_Mode` = `(touchMode << 4) | advancedKeyMode`; `advancedKeyMode 8` is SOCD. Travel values are in microns (`mm * 1000`).
-- SOCD (protocol 1.0.7 and later): `[pos1, pos2, key1(2), key2(2), type, mode, delay(2)]`, `type 0` binds by position.
-- Polling: `setRateOfReturn(0..6)` maps to 8K, 4K, 2K, 1K, 500, 250 and 125 Hz.
-- Live travel: `getRm6X21Travel()` returns a 6×21 matrix in millimetres.
-
-</details>
-
-### Verification
+Open `http://127.0.0.1:5199/` in Chrome or Edge. On Windows, `start.cmd` is an optional shortcut. WebHID needs a secure context: HTTPS or localhost.
 
 ```bash
-npm test                     # unit and real SDK packet tests with simulated USB transport
+npm test
 npm run build
 npx playwright install chromium
-npm run test:e2e             # navigation, mapping, RGB drafts, themes, language, axe, responsive layouts
+npm run test:e2e
 ```
 
-GitHub Pages CI runs the same tests before deploying. Browser tests use the production preview when no development server is already running.
+Or run `npm run check` after installing Playwright Chromium. CI performs the tests and production build before deploying to GitHub Pages.
 
-## Disclaimer
+## Contribute or report a problem
 
-This project is not affiliated with or endorsed by AULA or SparkLink. AULA and WIN 60 HE MAX are trademarks of their
-respective owners. Use at your own risk.
+[Open an issue](https://github.com/PrimeBuild-pc/aula-win60he-tool/issues/new?template=bug_report.yml) with your model, USB IDs, browser, firmware/protocol and reproduction steps. Please distinguish an on-screen success message, a USB readback and an observed physical result. Translation improvements and hardware evidence are welcome; see [CONTRIBUTING.md](CONTRIBUTING.md).
 
-## License
+## License and attribution
 
-[MIT](LICENSE)
+[MIT](LICENSE). Built with `@sparklinkplayjoy/sdk-keyboard` and the SparkLink KB2 protocol. This project is not affiliated with or endorsed by AULA or SparkLink. Product names belong to their respective owners.

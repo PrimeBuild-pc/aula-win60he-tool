@@ -3,9 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>WIN60 HE Studio · AULA WIN 60 HE MAX web driver (Rapid Trigger, SOCD, 8 kHz)</title>
-    <meta name="description" content="Free, open source web driver for the AULA WIN 60 HE MAX Hall effect keyboard. Configure Rapid Trigger, SOCD (snap tap), actuation, key remapping and 8000 Hz polling in Chrome or Edge via WebHID. No download needed." />
-    <meta name="keywords" content="AULA WIN 60 HE MAX, AULA WIN60 HE, AULA driver, web driver, Hall effect keyboard, magnetic keyboard, rapid trigger, SOCD, snap tap, 8000Hz polling, WebHID, keyboard configurator" />
+    <title>AULA WIN 60 HE MAX Web Driver | WIN60 HE Studio</title>
+    <meta name="description" content="Free AULA WIN60 HE MAX web driver. Configure RGB lighting, Rapid Trigger, SOCD, key mapping and 8 kHz polling in Chrome or Edge. No installer required." />
     <meta name="theme-color" content="#0a0c10" />
     <link rel="canonical" href="https://primebuild-pc.github.io/aula-win60he-tool/" />
     <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
@@ -27,15 +26,19 @@
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
-        "@type": "SoftwareApplication",
+        "@type": "WebApplication",
         "name": "WIN60 HE Studio",
-        "description": "Open source web driver for the AULA WIN 60 HE MAX Hall effect keyboard: Rapid Trigger, SOCD, key remapping and 8000 Hz polling via WebHID.",
+        "description": "Free, open source web configurator for the AULA WIN 60 HE MAX Hall effect keyboard, with RGB lighting, Rapid Trigger, SOCD and key remapping.",
         "applicationCategory": "UtilitiesApplication",
         "operatingSystem": "Windows, macOS, Linux (Chrome or Edge)",
+        "browserRequirements": "Desktop Chrome or Edge with WebHID; HTTPS or localhost; USB access to AULA WIN 60 HE MAX 1CA2:1902",
+        "inLanguage": ["en", "it", "ru", "es", "ja"],
+        "softwareVersion": "0.4.0",
+        "isAccessibleForFree": true,
         "url": "https://primebuild-pc.github.io/aula-win60he-tool/",
         "image": "https://primebuild-pc.github.io/aula-win60he-tool/og.png",
         "license": "https://opensource.org/licenses/MIT",
-        "codeRepository": "https://github.com/PrimeBuild-pc/aula-win60he-tool",
+        "sameAs": "https://github.com/PrimeBuild-pc/aula-win60he-tool",
         "offers": { "@type": "Offer", "price": "0", "priceCurrency": "EUR" }
       }
     </script>
@@ -64,7 +67,7 @@
         <div id="entryError" class="entry-error" role="alert" hidden></div>
         <p class="entry-browser-note">Chrome o Edge su desktop · Nessuna installazione · Impostazioni salvate nella tastiera</p>
       </div>
-      <footer class="entry-footer"><span>PRECISIONE CHE SI SENTE.</span><span>OPEN SOURCE. FATTO PER IL TUO SETUP.</span></footer>
+      <footer class="entry-footer"><span>PRECISIONE CHE SI SENTE.</span><a href="./guide/" lang="en">AULA WIN 60 HE MAX guide &amp; compatibility</a><span>OPEN SOURCE. FATTO PER IL TUO SETUP.</span></footer>
     </section>
 
     <div class="app" id="workspace" hidden>
@@ -95,7 +98,7 @@
           <div id="status" class="status status--idle" role="status">Non connesso</div>
           <button id="btnConnect" class="primary block">Connetti tastiera</button>
           <button id="btnDisconnect" hidden>Disconnetti</button>
-          <a class="source-link" href="https://github.com/PrimeBuild-pc/aula-win60he-tool" target="_blank" rel="noopener">Open source · v0.3.0 ↗</a>
+          <a class="source-link" href="https://github.com/PrimeBuild-pc/aula-win60he-tool" target="_blank" rel="noopener">Open source · v0.4.0 ↗</a>
         </div>
       </aside>
 
@@ -104,7 +107,7 @@
           <span class="eyebrow">WORKSPACE <span class="topbar-divider">/</span> WIN60 HE MAX</span>
           <div class="topbar-controls">
             <label class="compact-label">Tema<select id="themeSelect" aria-label="Tema"><option value="system">Sistema</option><option value="dark">Scuro</option><option value="light">Chiaro</option></select></label>
-            <label class="compact-label">Lingua<select id="languageSelect" aria-label="Lingua"><option value="it">Italiano</option><option value="en">English</option></select></label>
+            <label class="compact-label">Lingua<select id="languageSelect" aria-label="Lingua"><option value="it" lang="it">Italiano</option><option value="en" lang="en">English</option><option value="ru" lang="ru">Русский</option><option value="es" lang="es">Español</option><option value="ja" lang="ja">日本語</option></select></label>
           </div>
         </div>
         <div id="connectionHint" class="connection-hint"><span class="connection-dot"></span><span>Esplora il tuo setup. Collega la tastiera per leggere e salvare le impostazioni.</span><button data-go="settings" class="text-button">Come funziona ↗</button></div>
@@ -415,6 +418,7 @@
     </div>
 
     <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+    <noscript><p>This keyboard configurator requires JavaScript and desktop Chrome or Edge. Read the <a href="./guide/">AULA WIN 60 HE MAX setup and compatibility guide</a> without connecting a device.</p></noscript>
 
     <script>
       window.__aulaBooted = false;

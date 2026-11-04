@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AULA WIN 60 HE MAX Web Driver: Setup, RGB &amp; Rapid Trigger</title>
+  <meta name="description" content="Set up the AULA WIN60 HE MAX in your browser. Learn how to configure RGB lighting, Rapid Trigger, SOCD and key mapping with the free WIN60 HE Studio web driver." />
+  <meta name="color-scheme" content="light dark" />
+  <link rel="canonical" href="https://primebuild-pc.github.io/aula-win60he-tool/guide/" />
+  <link rel="icon" href="../favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="./style.css" />
+  <meta property="og:type" content="article" />
+  <meta property="og:site_name" content="WIN60 HE Studio" />
+  <meta property="og:locale" content="en_US" />
+  <meta property="og:title" content="AULA WIN 60 HE MAX Web Driver — Setup &amp; Compatibility" />
+  <meta property="og:description" content="A practical guide to RGB, Rapid Trigger, key remapping and SOCD with the free, open source AULA WIN60 HE MAX browser configurator." />
+  <meta property="og:url" content="https://primebuild-pc.github.io/aula-win60he-tool/guide/" />
+  <meta property="og:image" content="https://primebuild-pc.github.io/aula-win60he-tool/og.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt" content="WIN60 HE Studio for the AULA WIN 60 HE MAX magnetic keyboard" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="AULA WIN 60 HE MAX Web Driver — Setup Guide" />
+  <meta name="twitter:description" content="Connect over USB, configure RGB and Rapid Trigger, remap keys and save a backup. Free and open source." />
+  <meta name="twitter:image" content="https://primebuild-pc.github.io/aula-win60he-tool/og.png" />
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "TechArticle",
+    "headline": "AULA WIN 60 HE MAX web driver setup and compatibility",
+    "description": "A practical guide to connecting the AULA WIN 60 HE MAX and configuring RGB, Rapid Trigger, SOCD and key mapping with WIN60 HE Studio.",
+    "inLanguage": "en",
+    "url": "https://primebuild-pc.github.io/aula-win60he-tool/guide/",
+    "mainEntityOfPage": "https://primebuild-pc.github.io/aula-win60he-tool/guide/",
+    "about": { "@type": "SoftwareApplication", "name": "WIN60 HE Studio", "url": "https://primebuild-pc.github.io/aula-win60he-tool/" },
+    "image": "https://primebuild-pc.github.io/aula-win60he-tool/og.png"
+  }
+  </script>
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+  <header class="site-header">
+    <a class="brand" href="../"><img src="../favicon.svg" alt="" width="30" height="30" />WIN60 <span>HE STUDIO</span></a>
+    <nav aria-label="Main navigation"><a href="https://github.com/PrimeBuild-pc/aula-win60he-tool">GitHub repository</a><a class="button small" href="../">Open web driver <span aria-hidden="true">↗</span></a></nav>
+  </header>
+  <main id="main">
+    <section class="hero" aria-labelledby="title">
+      <p class="eyebrow">THE KEYBOARD SETUP GUIDE</p>
+      <h1 id="title">AULA WIN 60 HE MAX<br /><span>web driver &amp; configurator.</span></h1>
+      <p class="intro">Your magnetic keyboard, configured in your browser. Set RGB lighting, Rapid Trigger, key mappings and SOCD with <strong>WIN60 HE Studio</strong> — free and open source.</p>
+      <div class="actions"><a class="button" href="../">Connect your keyboard <span aria-hidden="true">→</span></a><a href="#compatibility">Check compatibility</a></div>
+      <p class="note">Desktop Chrome or Edge · USB connection · No installer</p>
+    </section>
+    <nav class="contents" aria-label="On this page"><a href="#setup">Quick setup</a><a href="#features">Features</a><a href="#compatibility">Compatibility</a><a href="#questions">Common questions</a><a href="#limits">Current limits</a></nav>
+
+    <section id="setup" aria-labelledby="setup-title">
+      <p class="eyebrow">START HERE</p><h2 id="setup-title">Connect, customize, save.</h2>
+      <ol class="steps">
+        <li><strong>Connect by USB.</strong> Plug your AULA WIN 60 HE MAX directly into your computer. Close other AULA driver tabs or applications.</li>
+        <li><strong>Open the web driver.</strong> Use desktop Chrome or Edge, press Connect and choose <code>WIN 60 HE MAX</code> in the browser picker.</li>
+        <li><strong>Back up your current setup.</strong> Open Backup and download a JSON copy before making large changes.</li>
+        <li><strong>Apply your settings.</strong> Edit a panel and press Apply or Save. The preview alone does not write to the keyboard.</li>
+      </ol>
+      <p>The app follows your browser language and offers English, Italian, Russian, Spanish and Japanese. Choose a light, dark or system theme after connecting.</p>
+    </section>
+
+    <section id="features" aria-labelledby="features-title">
+      <p class="eyebrow">MAKE IT YOURS</p><h2 id="features-title">Configure Rapid Trigger, RGB and key mapping.</h2>
+      <div class="cards">
+        <article><span class="tag">01 / RESPONSE</span><h3>Rapid Trigger &amp; actuation</h3><p>Adjust per-key actuation, Rapid Trigger press/release sensitivity and dead zones, or select shared global actuation. Check sensor travel in the key tester.</p></article>
+        <article><span class="tag">02 / LIGHTING</span><h3>RGB &amp; per-key colors</h3><p>Choose static lighting, rainbow or one of 20 firmware effects. Set brightness and speed, or paint individual keys. Apply the draft to save it to the device.</p></article>
+        <article><span class="tag">03 / LAYOUT</span><h3>Key remapping &amp; Fn</h3><p>Search functions, capture a key or edit the base and Fn layers. Restore WASD letters and Fn arrows with the Overview shortcut.</p></article>
+        <article><span class="tag">04 / INPUT</span><h3>SOCD &amp; advanced actions</h3><p>Configure opposing-direction pairs, DKS, MPT, Mod-Tap, Toggle, release actions, Rappy Snappy or a macro sequence. Review the firmware limits below.</p></article>
+      </div>
+      <p>Additional controls include 125–8000 Hz polling, supported onboard profiles, Super Response, Windows/macOS mode, guided calibration and JSON backup/restore. Controls depend on the device capabilities reported at connection.</p>
+    </section>
+
+    <section id="compatibility" aria-labelledby="compatibility-title">
+      <p class="eyebrow">CHECK YOUR MODEL</p><h2 id="compatibility-title">AULA WIN60 HE MAX compatibility.</h2>
+      <p>The supported model is <strong>AULA WIN 60 HE MAX</strong>, also written <strong>WIN60 HE MAX</strong>. Similar product names do not mean identical firmware or USB protocols.</p>
+      <div class="table-wrap"><table><caption>Supported keyboard and browser configuration</caption><tbody>
+        <tr><th scope="row">Keyboard</th><td>AULA WIN 60 HE MAX</td></tr>
+        <tr><th scope="row">USB IDs</th><td><code>1CA2:1902</code>; vendor interface <code>FFA0:0001</code></td></tr>
+        <tr><th scope="row">Verified protocol</th><td>SparkLink KB2 1.0.9; SDK 1.0.24</td></tr>
+        <tr><th scope="row">Browser</th><td>Desktop Chrome or Edge with WebHID</td></tr>
+        <tr><th scope="row">Operating system</th><td>Windows, macOS or Linux with the required HID permissions</td></tr>
+        <tr><th scope="row">Connection</th><td>USB cable; direct port recommended for 8 kHz</td></tr>
+      </tbody></table></div>
+      <p>Firefox, Safari and mobile browsers are not supported configuration environments. Other AULA keyboards, including similarly named WIN60 HE or WIN68 HE variants, are unverified. This app does not install a Windows driver package or provide a firmware image.</p>
+    </section>
+
+    <section id="questions" aria-labelledby="questions-title">
+      <p class="eyebrow">PRACTICAL ANSWERS</p><h2 id="questions-title">Common setup questions.</h2>
+      <details><summary>How do I change the AULA WIN60 HE MAX RGB lighting?</summary><p>Connect, open RGB lighting, choose an effect or static color and press Apply lighting. Brightness and speed use five firmware levels, 0–4. Brightness 0 is dark. To color individual keys, select them, choose a color, press Paint selection and apply.</p></details>
+      <details><summary>How do I enable Rapid Trigger?</summary><p>Open Performance, select the keys and choose Rapid Trigger. Set actuation, press/release sensitivity and dead zones, then apply. The FPS profile in Overview is a convenience preset; review its values before using it.</p></details>
+      <details><summary>Why do A/D or WASD send arrows instead of letters?</summary><p>Use Set Fn arrows in Overview to restore WASD letters on the base layer. This firmware ignores Fn assignments on SOCD-enabled keys. Use Fn + Right Alt / Right Ctrl for left/right while A/D SOCD is active.</p></details>
+      <details><summary>Is this the official AULA driver?</summary><p>No. WIN60 HE Studio is an independent open source interface built with the SparkLink keyboard SDK. It is not affiliated with or endorsed by AULA. You can inspect the code and report problems in the <a href="https://github.com/PrimeBuild-pc/aula-win60he-tool">GitHub repository</a>.</p></details>
+      <details><summary>Why does the keyboard not appear in the picker?</summary><p>Check the exact model and USB IDs, use a data-capable cable and close other driver connections. Open the app directly in desktop Chrome or Edge over HTTPS. Linux may need a device-specific HID permission rule.</p></details>
+      <details><summary>Can I use SOCD or macros in a game?</summary><p>Check the game and tournament rules before enabling automated input. Firmware availability does not imply permission in a game or competition.</p></details>
+      <details><summary>Does this app update keyboard firmware?</summary><p>No. Firmware flashing is unavailable until an official image, correct bootloader and recovery procedure have been verified. Do not use firmware for a different AULA model.</p></details>
+    </section>
+
+    <section id="limits" class="limits" aria-labelledby="limits-title">
+      <p class="eyebrow">KNOW WHAT IS VERIFIED</p><h2 id="limits-title">Current limits and hardware checks.</h2>
+      <p>RGB static and per-key settings completed real USB write/readback/restore checks on the target keyboard. Browser tests exercise the actual application and SDK with an emulated WebHID boundary. These checks do not establish physical macro timing, sensor accuracy or advanced-action behavior.</p>
+      <p>Macros support one assigned sequence per profile, up to 64 balanced events. The SDK shares a staging buffer. Studio retains original events locally and can export them; arbitrary sequences made in another driver cannot be reconstructed from the binding metadata. Keep the original JSON file.</p>
+      <p>Back up a working profile before making large changes. See the <a href="https://github.com/PrimeBuild-pc/aula-win60he-tool/blob/main/docs/USER_GUIDE.md">full user guide</a> and <a href="https://github.com/PrimeBuild-pc/aula-win60he-tool/blob/main/docs/TROUBLESHOOTING.md">troubleshooting documentation</a> for details.</p>
+    </section>
+    <section class="end-card" aria-labelledby="ready-title"><h2 id="ready-title">Ready to make it yours?</h2><p>Connect the supported keyboard and start with a backup.</p><a class="button" href="../">Open WIN60 HE Studio <span aria-hidden="true">→</span></a></section>
+  </main>
+  <footer class="site-footer"><p>WIN60 HE Studio · Free and open source · <a href="https://github.com/PrimeBuild-pc/aula-win60he-tool/blob/main/LICENSE">MIT license</a></p><p>Independent project. Not affiliated with AULA or SparkLink.</p></footer>
+</body>
+</html>

@@ -1,7 +1,7 @@
 {
   "name": "aula-win60he-tool",
   "private": true,
-  "version": "0.3.0",
+  "version": "0.4.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -20,7 +20,7 @@
     "@sparklinkplayjoy/protocol-keyboard": "1.0.7",
     "vite": "^7.1.0"
   },
-  "description": "Open source web driver (WebHID) for the AULA WIN 60 HE MAX Hall effect keyboard: Rapid Trigger, SOCD, key remapping, 8000 Hz polling.",
+  "description": "Free AULA WIN 60 HE MAX web driver and Hall effect keyboard configurator: RGB, Rapid Trigger, SOCD, key remapping and 8 kHz polling via WebHID.",
   "keywords": [
     "aula",
     "aula-win60-he-max",
@@ -31,6 +31,9 @@
     "snap-tap",
     "webhid",
     "keyboard-configurator",
+    "rgb-lighting",
+    "dynamic-keystroke",
+    "key-remapping",
     "web-driver"
   ],
   "homepage": "https://primebuild-pc.github.io/aula-win60he-tool/",

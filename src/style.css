@@ -275,7 +275,8 @@ input[type="range"] { width: 100%; accent-color: var(--accent); }
 .entry-status { max-width: 470px; color: var(--muted); font-size: 12px; line-height: 1.6; margin: 16px 0 0; }
 .entry-error { padding: 12px 18px; margin-top: 14px; max-width: 580px; font-size: 13px; border: 1px solid var(--danger); border-radius: 10px; color: var(--danger); background: var(--panel); }
 .entry-browser-note { color: var(--muted); font-size: 10px; margin: 22px 0 0; }
-.entry-footer { padding-top: 14px; border-top: 1px solid var(--border); font-size: 8px; }
+.entry-footer { padding-top: 14px; border-top: 1px solid var(--border); font-size: 8px; flex-wrap: wrap; }
+html:lang(ja) .entry-content h1 { font-size: clamp(31px, 5.3vw, 68px); letter-spacing: -.055em; }
 @keyframes entry-float { 0%, 100% { transform: rotateX(20deg) rotateZ(-4deg) translateY(0); } 50% { transform: rotateX(20deg) rotateZ(-3deg) translateY(-7px); } }
 @keyframes entry-breathe { to { opacity: .22; transform: scaleX(.8); } }
 @media (max-width: 820px) { .connection-screen { padding: 20px; }.entry-edition { display: none; }.entry-keyboard { --u: 34px; }.entry-content { padding-top: 44px; }.entry-footer { font-size: 7px; } }
@@ -379,3 +380,4 @@ a:focus-visible, .file:focus-within { outline: 2px solid var(--accent-2); outlin
   .live { grid-template-columns: 1fr 24px 90px; gap: 10px; }.live-num strong { font-size: 28px; }
   .toast { left: 16px; right: 16px; bottom: 16px; }.key { flex-shrink: 0; }
 }
+.entry-footer a { color: var(--text); font: 500 11px/1.6 system-ui, sans-serif; text-decoration: underline; text-underline-offset: 4px; letter-spacing: .01em; }
