@@ -36,6 +36,8 @@ export function keyLabel(code) {
   return `0x${code.toString(16)}`;
 }
 
+export const physicalLabel = code => code === 1 ? 'Fn' : keyLabel(code);
+
 // Physical width in key units for the 60% ANSI layout; anything not listed is 1u.
 export const KEY_WIDTH = {
   42: 2, 43: 1.5, 49: 1.5, 57: 1.75, 40: 2.25, 225: 2.25, 229: 2.75,

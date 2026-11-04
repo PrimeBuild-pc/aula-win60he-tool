@@ -1,5 +1,7 @@
 import { AulaKeyboard, BASE_LAYER, FN_LAYER, KEYCODES, RATE_LABELS } from './aula.js';
-import { CODE_TO_HID, KEY_GROUPS, KEY_WIDTH, keyLabel } from './keycodes.js';
+import { CODE_TO_HID, KEY_GROUPS, KEY_WIDTH, keyLabel, physicalLabel } from './keycodes.js';
+import { stepTrigger } from './settings.js';
+import { initWorkspace } from './workspace.js';
 
 const $ = (id) => document.getElementById(id);
 const MAX_TRAVEL = 3.4;
@@ -30,6 +32,8 @@ const ui = {
   followPerf: null,
   socdMode: 0,
   live: false,
+  socdPair: [KEYCODES.A, KEYCODES.D],
+  calibration: false,
 };
 
 // ---------- helpers ----------
@@ -61,17 +65,25 @@ function setStatus(text, kind) {
 
 function setButtons() {
   for (const b of document.querySelectorAll('[data-needs-device]')) b.disabled = !ui.connected || ui.busy;
-  $('btnRestore').disabled = !ui.connected || ui.busy || !aula.backup;
-  $('btnConnect').disabled = ui.busy;
+  if (ui.calibration) for (const b of document.querySelectorAll('[data-needs-device]')) b.disabled = true;
+  $('btnRestore').disabled = !ui.connected || ui.busy || ui.calibration || !aula.backup;
+  $('btnConnect').disabled = ui.busy || ui.calibration || !AulaKeyboard.isSupported();
+  $('btnMapApply').disabled ||= $('btnMapApply').dataset.locked === '1';
+  $('btnMapDefault').disabled ||= $('btnMapApply').dataset.locked === '1';
+  $('btnCalibrationEnd').disabled = !ui.connected || ui.busy || !ui.calibration;
+  $('btnDisconnect').hidden = !ui.connected;
+  $('btnDisconnect').disabled = ui.busy || ui.calibration;
+  for (const b of $('profileSeg').children) b.disabled ||= !aula.state?.config?.hasFourConfig;
+  $('connectionHint').hidden = ui.connected;
 }
 
 // Runs one device operation at a time; live polling is paused so responses don't interleave.
 async function task(button, fn, okMessage) {
   if (ui.busy) return;
-  const wasLive = ui.live;
-  if (wasLive) await stopLive();
   ui.busy = true;
   setButtons();
+  const wasLive = ui.live;
+  if (wasLive) await stopLive();
   const old = button?.textContent;
   if (button) button.textContent = 'Attendi…';
   try {
@@ -85,7 +97,7 @@ async function task(button, fn, okMessage) {
     if (button) button.textContent = old;
     ui.busy = false;
     setButtons();
-    if (wasLive && ui.connected) startLive();
+    if (wasLive && ui.connected && document.querySelector('.view.active')?.dataset.view === 'test' && !document.hidden) startLive();
   }
 }
 
@@ -103,7 +115,7 @@ function physicalRows() {
 }
 
 const perfOf = (key) => aula.state?.performances?.find((p) => p.keyValue === key);
-const mapOf = (layer, key) => aula.state?.layerMaps?.[layer]?.get(key) ?? (layer === BASE_LAYER ? key : 1);
+const mapOf = (layer, key) => aula.state?.layerMaps?.[layer]?.get(key) ?? (layer === BASE_LAYER ? (key === 1 ? 0xf001 : key) : 1);
 
 // ---------- keyboard drawing ----------
 
@@ -124,7 +136,10 @@ function drawKeyboard(el, { label, classes, onClick }) {
       k.innerHTML = `<span class="key-main"></span><span class="key-sub"></span>`;
       k.firstChild.textContent = main.main;
       k.lastChild.textContent = main.sub || '';
-      k.title = `${keyLabel(p.keyValue)} (${p.keyValue})`;
+      k.title = `${physicalLabel(p.keyValue)} (${p.keyValue})`;
+      k.setAttribute('aria-label', `${physicalLabel(p.keyValue)}: ${main.main}${main.sub ? `, ${main.sub}` : ''}`);
+      if (onClick) k.setAttribute('aria-pressed', k.classList.contains('is-selected'));
+      else k.tabIndex = -1;
       if (onClick) k.addEventListener('click', (e) => onClick(p.keyValue, e));
       rowEl.appendChild(k);
     }
@@ -137,6 +152,7 @@ function renderAll() {
   renderKeymap();
   renderPerf();
   renderTestKeyboard();
+  document.dispatchEvent(new Event('studio:render'));
 }
 
 // ---------- overview ----------
@@ -145,7 +161,7 @@ function renderOverview() {
   const s = aula.state;
   $('statRate').textContent = s?.rate ?? '—';
   $('statRt').textContent = s ? `${s.rtCount}/${s.physical.length}` : '—';
-  $('statSocd').textContent = s ? (s.socdCount >= 2 ? 'A / D' : 'Spento') : '—';
+  $('statSocd').textContent = s ? (s.socd?.length ? s.socd.map(p => `${keyLabel(p.pos1)}/${keyLabel(p.pos2)}`).join(' · ') : 'Spento') : '—';
   $('statProto').textContent = s?.protocolVersion ?? '—';
   for (const b of $('rateSeg').children) b.classList.toggle('active', Number(b.dataset.rate) === s?.rateIndex);
   drawKeyboard($('kbdOverview'), {
@@ -167,11 +183,7 @@ $('rateSeg').addEventListener('click', (e) => {
   const b = e.target.closest('button');
   if (!b) return;
   task(null, async () => {
-    try {
-      await aula.setRate(Number(b.dataset.rate));
-    } catch (error) {
-      log(`Il cambio di polling può far riconnettere la tastiera: premi di nuovo Connetti. (${error?.message || error})`, 'warn');
-    }
+    await aula.setRate(Number(b.dataset.rate));
     renderOverview();
   }, `Polling impostato a ${RATE_LABELS[b.dataset.rate]}`);
 });
@@ -202,7 +214,7 @@ $('btnFixFn').addEventListener('click', () =>
 function renderKeymap() {
   for (const b of $('layerSeg').children) b.classList.toggle('active', Number(b.dataset.layer) === ui.layer);
   drawKeyboard($('kbdMap'), {
-    label: (k) => ({ main: keyLabel(mapOf(ui.layer, k)), sub: ui.layer === FN_LAYER ? keyLabel(k) : '' }),
+    label: (k) => ({ main: keyLabel(mapOf(ui.layer, k)), sub: ui.layer === FN_LAYER ? physicalLabel(k) : '' }),
     classes: (k) => [
       k === ui.mapKey ? 'is-selected' : '',
       mapOf(ui.layer, k) !== (ui.layer === BASE_LAYER ? k : 1) ? 'is-changed' : '',
@@ -221,16 +233,19 @@ function openMapEditor() {
   if (k == null) return;
   const current = mapOf(ui.layer, k);
   $('mapEditor').hidden = false;
-  $('mapKeyName').textContent = `${keyLabel(k)} · ${ui.layer === BASE_LAYER ? 'layer base' : 'layer Fn'}`;
+  $('mapKeyName').textContent = `${physicalLabel(k)} · ${ui.layer === BASE_LAYER ? 'layer base' : 'layer Fn'}`;
   $('mapCurrent').textContent = `Funzione attuale: ${keyLabel(current)} (codice ${current})`;
   $('mapTarget').value = String(current);
   if ($('mapTarget').value !== String(current)) $('mapTarget').value = '1';
   $('mapSocdWarn').hidden = !(ui.layer === FN_LAYER && perfOf(k)?.advancedKeyMode === 8);
-  const lockFn = ui.layer === BASE_LAYER && k === KEYCODES_FN;
+  const lockFn = ui.layer === BASE_LAYER && isFnKey(k);
   $('btnMapApply').dataset.locked = lockFn ? '1' : '';
   if (lockFn) $('mapCurrent').textContent += ' — il tasto Fn non è rimappabile qui, altrimenti perderesti il layer Fn.';
+  $('mapEmpty').hidden = true;
+  setButtons();
+  document.dispatchEvent(new Event('studio:map'));
 }
-const KEYCODES_FN = 1;
+const isFnKey = key => [1, KEYCODES.FN0, KEYCODES.FN1, KEYCODES.FN2, KEYCODES.FN3].includes(key);
 
 $('mapTarget').innerHTML = Object.entries(KEY_GROUPS)
   .map(([group, codes]) => `<optgroup label="${group}">${Object.entries(codes)
@@ -249,9 +264,9 @@ $('layerSeg').addEventListener('click', (e) => {
 async function applyMapping(value) {
   const k = ui.mapKey;
   if (k == null) return;
-  if (ui.layer === BASE_LAYER && k === KEYCODES_FN) throw new Error('Il tasto Fn non si rimappa dal layer base.');
+  if (ui.layer === BASE_LAYER && isFnKey(k)) throw new Error('Il tasto Fn non si rimappa dal layer base.');
   await aula.setMapping(ui.layer, k, value);
-  log(`${keyLabel(k)} (${ui.layer === BASE_LAYER ? 'base' : 'Fn'}) → ${keyLabel(value)}`, 'ok');
+  log(`${physicalLabel(k)} (${ui.layer === BASE_LAYER ? 'base' : 'Fn'}) → ${keyLabel(value)}`, 'ok');
   renderAll();
   openMapEditor();
 }
@@ -283,7 +298,7 @@ $('perfMode').addEventListener('change', drawDiagram);
 
 function renderPerf() {
   drawKeyboard($('kbdPerf'), {
-    label: (k) => ({ main: keyLabel(k), sub: perfOf(k)?.touchMode === 'rt' ? 'RT' : '' }),
+    label: (k) => ({ main: physicalLabel(k), sub: perfOf(k)?.touchMode === 'rt' ? 'RT' : '' }),
     classes: (k) => [ui.perfSel.has(k) ? 'is-selected' : '', perfOf(k)?.touchMode === 'rt' ? 'is-rt' : ''].join(' '),
     onClick: (k) => {
       if (ui.perfSel.has(k)) ui.perfSel.delete(k);
@@ -310,7 +325,7 @@ function afterSelection() {
       set('perfRtr', p.rtRelease);
       set('perfDp', p.pressDead);
       set('perfDr', p.releaseDead);
-      $('perfReadout').textContent = `${keyLabel(k)}: ${p.touchMode === 'rt' ? 'Rapid Trigger' : p.touchMode}, attuazione ${p.actuation} mm, RT ${p.rtPress}/${p.rtRelease} mm.`;
+      $('perfReadout').textContent = `${physicalLabel(k)}: ${p.touchMode === 'rt' ? 'Rapid Trigger' : p.touchMode}, attuazione ${p.actuation} mm, RT ${p.rtPress}/${p.rtRelease} mm.`;
     });
   }
 }
@@ -383,25 +398,16 @@ $('socdSeg').addEventListener('click', (e) => {
   for (const x of $('socdSeg').children) x.classList.toggle('active', x === b);
 });
 
-function setSocdState(on) {
-  for (const k of [KEYCODES.A, KEYCODES.D]) {
-    const p = perfOf(k);
-    if (p) p.advancedKeyMode = on ? 8 : 0;
-  }
-  if (aula.state) aula.state.socdCount = aula.state.performances.filter((p) => p.advancedKeyMode === 8).length;
-  renderAll();
-}
-
 $('btnSocdApply').addEventListener('click', () =>
   task($('btnSocdApply'), async () => {
-    await aula.applySocd(ui.socdMode);
-    setSocdState(true);
-  }, 'SOCD attivo su A/D'),
+    await aula.applySocd(ui.socdMode, ui.socdPair);
+    renderAll();
+  }, 'SOCD salvato e verificato'),
 );
 $('btnSocdRemove').addEventListener('click', () =>
   task($('btnSocdRemove'), async () => {
-    await aula.removeSocd();
-    setSocdState(false);
+    await aula.removeSocd(ui.socdPair);
+    renderAll();
   }, 'SOCD disattivato'),
 );
 
@@ -412,7 +418,7 @@ const rtState = { pressed: false, ref: 0 };
 
 function renderTestKeyboard() {
   drawKeyboard($('kbdTest'), {
-    label: (k) => ({ main: keyLabel(k), sub: '' }),
+    label: (k) => ({ main: physicalLabel(k), sub: '' }),
     classes: (k) => (k === ui.followKey ? 'is-selected' : ''),
     onClick: (k) => {
       ui.followKey = k;
@@ -420,11 +426,12 @@ function renderTestKeyboard() {
       loadFollowPerf();
     },
   });
-  $('capLabel').textContent = keyLabel(ui.followKey);
+  $('capLabel').textContent = physicalLabel(ui.followKey);
 }
 
 function loadFollowPerf() {
   ui.followPerf = null;
+  Object.assign(rtState, { pressed: false, ref: 0, started: false });
   trace.length = 0;
   if (!ui.connected) return;
   task(null, async () => {
@@ -434,34 +441,7 @@ function loadFollowPerf() {
 
 // Mirrors the firmware's Rapid Trigger logic so the UI can show press/release from the raw travel.
 function stepRt(t, perf) {
-  const act = perf?.actuation ?? 0.5;
-  if (t < act) {
-    rtState.pressed = false;
-    rtState.ref = t;
-    return;
-  }
-  if (perf?.touchMode !== 'rt') {
-    rtState.pressed = true;
-    return;
-  }
-  if (rtState.pressed) {
-    rtState.ref = Math.max(rtState.ref, t);
-    if (t <= rtState.ref - perf.rtRelease) {
-      rtState.pressed = false;
-      rtState.ref = t;
-    }
-  } else {
-    if (rtState.ref < act) {
-      rtState.pressed = true;
-      rtState.ref = t;
-      return;
-    }
-    rtState.ref = Math.min(rtState.ref, t);
-    if (t >= rtState.ref + perf.rtPress) {
-      rtState.pressed = true;
-      rtState.ref = t;
-    }
-  }
+  stepTrigger(rtState, t, perf ?? {});
 }
 
 function drawLive(travels) {
@@ -511,7 +491,7 @@ function drawLive(travels) {
 
 let liveLoop = null;
 function startLive() {
-  if (ui.live || !ui.connected) return;
+  if (ui.live || ui.busy || !ui.connected || document.hidden) return;
   ui.live = true;
   $('btnLive').textContent = 'Ferma lettura';
   liveLoop = (async () => {
@@ -528,7 +508,7 @@ function startLive() {
           ui.live = false;
         }
       }
-      await new Promise(requestAnimationFrame);
+      await new Promise(resolve => setTimeout(resolve, 50));
     }
     $('btnLive').textContent = 'Avvia lettura';
   })();
@@ -554,6 +534,7 @@ const keyLines = [];
 function onKey(e, down) {
   if (e.target?.closest?.('input, select, textarea')) return;
   if (document.querySelector('.view.active')?.dataset.view !== 'test') return;
+  if (e.key === 'Tab' || e.key === 'Escape' || (['Enter', ' '].includes(e.key) && e.target?.closest?.('button, a'))) return;
   e.preventDefault();
   if (down && e.repeat) return;
   const hid = CODE_TO_HID[e.code];
@@ -565,7 +546,7 @@ function onKey(e, down) {
     chip.className = 'chip';
     chip.dataset.code = e.code;
     chip.textContent = e.key === ' ' ? 'Space' : e.key;
-    chips.appendChild(chip);
+    if (![...chips.children].some(c => c.dataset.code === e.code)) chips.appendChild(chip);
   } else {
     chips.querySelector(`[data-code="${e.code}"]`)?.remove();
   }
@@ -582,28 +563,34 @@ window.addEventListener('blur', () => {
 
 // ---------- backup ----------
 
-$('btnBackup').addEventListener('click', () => {
+$('btnBackup').addEventListener('click', () => task($('btnBackup'), async () => {
+  $('backupProgress').hidden = false;
   try {
-    const blob = new Blob([JSON.stringify(aula.exportBackup(), null, 2)], { type: 'application/json' });
+    const data = await aula.captureBackup((done, total) => {
+      $('backupProgress').firstElementChild.style.setProperty('--p', done / total);
+      $('backupInfo').textContent = `Lettura ${done}/${total}`;
+    });
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     a.download = `win60he-backup-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
     a.click();
-    URL.revokeObjectURL(a.href);
-    toast('Backup scaricato');
-  } catch (error) {
-    toast(error?.message || String(error), 'err');
-  }
-});
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    $('backupInfo').textContent = `${data.performances.length} tasti · ${data.socd.length} coppie SOCD · RGB inclusi`;
+  } finally { $('backupProgress').hidden = true; }
+}, 'Backup completo scaricato'));
 
 $('fileBackup').addEventListener('change', async (e) => {
   const file = e.target.files?.[0];
   if (!file) return;
   try {
+    if (file.size > 1024 * 1024) throw new Error('Il file supera 1 MB.');
     aula.loadBackup(JSON.parse(await file.text()));
+    $('backupInfo').textContent = `${file.name} · v${aula.backup.schema} · ${aula.backup.performances.length} tasti`;
     toast(`Backup letto: ${file.name}`);
   } catch (error) {
     aula.backup = null;
+    $('backupInfo').textContent = 'Nessun file valido caricato.';
     toast(`Backup non valido: ${error?.message || error}`, 'err');
   }
   setButtons();
@@ -628,12 +615,9 @@ $('nav').addEventListener('click', (e) => {
 
 async function refresh() {
   await aula.diagnose();
-  const version = aula.state.protocolVersion;
-  const socd = await aula.safe('Lettura SOCD', () => aula.kb.getSocd(KEYCODES.A, version));
-  if (socd && Number.isFinite(socd.mode) && perfOf(KEYCODES.A)?.advancedKeyMode === 8) {
-    ui.socdMode = socd.mode;
-    for (const x of $('socdSeg').children) x.classList.toggle('active', Number(x.dataset.mode) === socd.mode);
-  }
+  const socd = aula.state.socd.find(p => p.pos1 === ui.socdPair[0]);
+  ui.socdMode = socd?.mode ?? 0;
+  for (const x of $('socdSeg').children) x.classList.toggle('active', Number(x.dataset.mode) === ui.socdMode);
   renderAll();
 }
 
@@ -642,13 +626,15 @@ $('btnConnect').addEventListener('click', () =>
     setStatus('Connessione…', 'warn');
     try {
       await aula.connect();
-      ui.connected = true;
       setStatus(aula.initialInfo?.name || 'Connessa', 'ok');
       await refresh();
+      ui.connected = true;
       ui.followPerf = null;
     } catch (error) {
       ui.connected = false;
       setStatus('Non connesso', 'idle');
+      await aula.disconnect();
+      renderAll();
       throw error;
     }
   }, 'Tastiera connessa'),
@@ -659,6 +645,7 @@ if (!AulaKeyboard.isSupported()) {
   $('btnConnect').disabled = true;
 }
 
+initWorkspace({ aula, ui, task, toast, log, renderAll, drawKeyboard, physicalRows, mapOf, refresh, setButtons, setStatus, stopLive, openMapEditor });
 drawDiagram();
 renderAll();
 setButtons();

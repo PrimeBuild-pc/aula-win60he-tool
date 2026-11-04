@@ -39,9 +39,16 @@
         "offers": { "@type": "Offer", "price": "0", "priceCurrency": "EUR" }
       }
     </script>
+    <script>
+      try {
+        var theme = localStorage.getItem('studio-theme');
+        document.documentElement.dataset.theme = theme === 'light' || theme === 'dark' ? theme : matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+      } catch (_) {}
+    </script>
     <link rel="stylesheet" href="./src/style.css" />
   </head>
   <body>
+    <a class="skip-link" href="#main">Vai al contenuto</a>
     <div id="bootError" class="boot-error" hidden></div>
 
     <div class="app">
@@ -50,7 +57,7 @@
           <img src="./favicon.svg" alt="" width="32" height="32" />
           <div>
             <strong>WIN60 HE Studio</strong>
-            <span>web driver · beta</span>
+            <span>Il tuo setup. Il tuo controllo.</span>
           </div>
         </div>
 
@@ -58,19 +65,33 @@
           <button data-view="overview" class="active"><span class="ico">◎</span>Panoramica</button>
           <button data-view="keymap"><span class="ico">⌨</span>Mappatura</button>
           <button data-view="perf"><span class="ico">⇅</span>Prestazioni</button>
+          <button data-view="rgb"><span class="ico">◈</span>Illuminazione RGB</button>
           <button data-view="socd"><span class="ico">⇄</span>SOCD</button>
+          <button data-view="advanced"><span class="ico">⌘</span>Tasti avanzati</button>
           <button data-view="test"><span class="ico">◉</span>Test tasti</button>
           <button data-view="backup"><span class="ico">⇩</span>Backup</button>
+          <button data-view="settings"><span class="ico">⚙</span>Dispositivo</button>
           <button data-view="log"><span class="ico">≡</span>Log</button>
         </nav>
 
         <div class="device-pill">
-          <div id="status" class="status status--idle">Non connesso</div>
+          <span class="sidebar-label">AULA WIN 60 HE MAX</span>
+          <div id="status" class="status status--idle" role="status">Non connesso</div>
           <button id="btnConnect" class="primary block">Connetti tastiera</button>
+          <button id="btnDisconnect" hidden>Disconnetti</button>
+          <a class="source-link" href="https://github.com/PrimeBuild-pc/aula-win60he-tool" target="_blank" rel="noopener">Open source · v0.2.0 ↗</a>
         </div>
       </aside>
 
-      <main class="content">
+      <main class="content" id="main" tabindex="-1">
+        <div class="topbar">
+          <span class="eyebrow">WORKSPACE <span class="topbar-divider">/</span> WIN60 HE MAX</span>
+          <div class="topbar-controls">
+            <label class="compact-label">Tema<select id="themeSelect" aria-label="Tema"><option value="system">Sistema</option><option value="dark">Scuro</option><option value="light">Chiaro</option></select></label>
+            <label class="compact-label">Lingua<select id="languageSelect" aria-label="Lingua"><option value="it">Italiano</option><option value="en">English</option></select></label>
+          </div>
+        </div>
+        <div id="connectionHint" class="connection-hint"><span class="connection-dot"></span><span>Esplora il tuo setup. Collega la tastiera per leggere e salvare le impostazioni.</span><button data-go="settings" class="text-button">Come funziona ↗</button></div>
         <!-- Panoramica -->
         <section class="view active" data-view="overview">
           <header class="view-head">
@@ -88,6 +109,10 @@
             <div class="stat"><span>SOCD</span><strong id="statSocd">—</strong></div>
             <div class="stat"><span>Protocollo</span><strong id="statProto">—</strong></div>
           </div>
+          <article class="card welcome-card">
+            <div><span class="eyebrow">60% LAYOUT. 100% CONTROLLO.</span><h2>Una tastiera, fatta a modo tuo.</h2><p class="hint">Dal punto di attuazione al colore di ogni tasto.<br />Tutto nel browser, tutto nella memoria della tastiera.</p><div class="row"><button class="primary" data-go="keymap">Personalizza i tasti →</button><button data-go="rgb">Crea la tua illuminazione</button></div></div>
+            <div class="mini-board" aria-hidden="true"><span>W</span><div><span>A</span><span>S</span><span>D</span></div><small>MAGNETIC PRECISION</small></div>
+          </article>
 
           <div class="grid2">
             <article class="card">
@@ -138,15 +163,22 @@
               </div>
             </div>
             <div class="kbd-wrap"><div class="kbd" id="kbdMap"></div></div>
+            <p class="hint keyboard-help">1. Seleziona un tasto <span>→</span> 2. Scegli la funzione <span>→</span> 3. Salva sulla tastiera</p>
           </article>
+          <div class="empty-state" id="mapEmpty"><strong>Da quale tasto iniziamo?</strong><span>Seleziona un tasto nella tastiera qui sopra. Puoi esplorare le funzioni anche senza collegarla.</span></div>
           <article class="card" id="mapEditor" hidden>
             <h2>Tasto <span id="mapKeyName"></span></h2>
             <p class="hint" id="mapCurrent"></p>
+            <div class="mapping-preview"><kbd id="mapFrom">A</kbd><span>→</span><kbd id="mapTo">A</kbd><span id="mapDraft" class="hint">Nessuna modifica</span></div>
+            <div class="fields"><label>Cerca una funzione<input id="mapSearch" type="search" placeholder="Es. volume, freccia, F5…" autocomplete="off" /></label></div>
+            <div id="mapCategories" class="filter-row" aria-label="Categorie funzioni"></div>
+            <div id="mapChoices" class="function-grid" aria-label="Funzioni disponibili"></div>
             <div class="fields">
               <label>Nuova funzione<select id="mapTarget"></select></label>
             </div>
             <div class="row">
-              <button id="btnMapApply" class="primary" data-needs-device>Applica</button>
+              <button id="btnMapApply" class="primary" data-needs-device>Salva mappatura</button>
+              <button id="btnMapCapture">Premi il tasto da assegnare</button>
               <button id="btnMapDefault" data-needs-device>Predefinito</button>
             </div>
             <p class="hint warn" id="mapSocdWarn" hidden>
@@ -204,17 +236,18 @@
         <!-- SOCD -->
         <section class="view" data-view="socd">
           <header class="view-head">
-            <h1>SOCD su A / D</h1>
-            <p>Gestisce cosa succede quando A e D sono premuti insieme. Utile per lo strafe negli FPS.</p>
+            <h1>SOCD</h1>
+            <p>Scegli quale input inviare quando due direzioni opposte sono premute insieme.</p>
           </header>
           <article class="card">
+            <div class="seg" id="socdPair"><button data-pair="ad" class="active">A / D · orizzontale</button><button data-pair="ws">W / S · verticale</button></div>
             <div class="socd-pair">
-              <div class="cap big">A</div><span>⇄</span><div class="cap big">D</div>
+              <div class="cap big" id="socdFirst">A</div><span>⇄</span><div class="cap big" id="socdSecond">D</div>
             </div>
             <div class="seg vertical" id="socdSeg">
-              <button data-mode="0" class="active"><strong>Ultimo premuto vince</strong><span>Consigliato per Counter-Strike, Valorant e simili</span></button>
-              <button data-mode="1"><strong>Priorità ad A</strong><span>Con entrambi premuti vale A</span></button>
-              <button data-mode="2"><strong>Priorità a D</strong><span>Con entrambi premuti vale D</span></button>
+              <button data-mode="0" class="active"><strong>Ultimo premuto vince</strong><span>Ha priorità la direzione premuta più di recente</span></button>
+              <button data-mode="1"><strong>Priorità al primo tasto</strong><span>Con entrambi premuti vale il primo della coppia</span></button>
+              <button data-mode="2"><strong>Priorità al secondo tasto</strong><span>Con entrambi premuti vale il secondo della coppia</span></button>
               <button data-mode="3"><strong>Neutro</strong><span>Con entrambi premuti non esce nulla</span></button>
             </div>
             <div class="row">
@@ -225,6 +258,8 @@
               Limite del firmware: sui tasti con SOCD il layer Fn viene ignorato, quindi Fn+A/D non danno le frecce.
               Usa Fn + Alt dx / Ctrl dx per sinistra/destra.
             </p>
+            <p class="hint" id="socdReadout">Collega la tastiera per leggere le coppie attive.</p>
+            <p class="hint">Verifica le regole del gioco o del torneo prima di attivare SOCD: l’automazione delle direzioni può essere vietata.</p>
           </article>
         </section>
 
@@ -267,7 +302,7 @@
         <section class="view" data-view="backup">
           <header class="view-head">
             <h1>Backup</h1>
-            <p>Salva layer e prestazioni in un file JSON e ripristinali quando vuoi.</p>
+            <p>Un file per ritrovare il tuo setup: mappatura, prestazioni, SOCD e illuminazione.</p>
           </header>
           <article class="card">
             <div class="row">
@@ -275,8 +310,42 @@
               <label class="file"><span>Carica backup</span><input id="fileBackup" type="file" accept="application/json" /></label>
               <button id="btnRestore" disabled>Ripristina</button>
             </div>
-            <p class="hint">Il backup non contiene la configurazione SOCD: dopo un ripristino riattivala dalla sezione SOCD.</p>
+            <p class="hint">Il backup legge tutti i tasti e include le coppie SOCD e i colori RGB. I vecchi backup v3 restano importabili. Il ripristino riguarda il profilo hardware attualmente selezionato.</p>
+            <p id="backupInfo" class="hint" role="status">Nessun file caricato.</p>
+            <div class="progress" id="backupProgress" hidden><div></div></div>
+            <p class="hint warn">Il ripristino sostituisce le impostazioni del profilo attuale. Esporta prima una copia del setup che vuoi conservare.</p>
           </article>
+        </section>
+
+        <section class="view" data-view="rgb">
+          <header class="view-head"><span class="eyebrow">MAKE IT YOURS</span><h1>Illuminazione RGB</h1><p>Una palette tutta tua. Scegli un effetto o dipingi ogni singolo tasto.</p></header>
+          <article class="card rgb-stage">
+            <div class="toolbar"><span class="stage-label"><span class="connection-dot"></span> ANTEPRIMA COLORE</span><span id="rgbSelection" class="hint">Nessun tasto selezionato</span></div>
+            <div class="kbd-wrap"><div class="kbd" id="kbdRgb"></div></div>
+            <p class="hint keyboard-help">L’anteprima mostra i colori; le animazioni effettive dipendono dal firmware. Le modifiche si salvano solo con Applica.</p>
+          </article>
+          <div class="grid2">
+            <article class="card"><h2>Effetto e intensità</h2><div class="fields">
+              <label>Effetto<select id="rgbMode"><option value="0">Colore statico</option><option value="21">Personalizzato · per tasto</option></select></label>
+              <label>Luminosità <output id="rgbBrightnessOut">100</output><input id="rgbBrightness" type="range" min="0" max="255" step="1" value="100" /></label>
+              <label>Velocità <output id="rgbSpeedOut">3</output><input id="rgbSpeed" type="range" min="0" max="5" step="1" value="3" /></label>
+              <label class="check-label"><input id="rgbDirection" type="checkbox" />Inverti direzione</label>
+            </div><div class="row"><button id="btnRgbApply" class="primary" data-needs-device>Applica illuminazione</button><button id="btnRgbOff" data-needs-device>Spegni RGB</button><button id="btnRgbRead" data-needs-device>Rileggi</button></div><p class="hint" id="rgbReadout" role="status">Anteprima locale · collega la tastiera per salvare.</p></article>
+            <article class="card"><h2>La tua palette</h2><p class="hint">Scegli uno dei sette colori, poi modificalo con il selettore.</p><div class="palette" id="rgbPalette"></div><div class="fields"><label>Colore selezionato<input type="color" id="rgbColor" value="#5eead4" /></label><label>Valore HEX<input id="rgbHex" type="text" value="#5eead4" maxlength="7" pattern="#[0-9a-fA-F]{6}" spellcheck="false" /></label></div><div class="filter-row" id="rgbPresets"><button data-rgb-preset="mint">Menta</button><button data-rgb-preset="ice">Ghiaccio</button><button data-rgb-preset="sunset">Tramonto</button><button data-rgb-preset="violet">Viola</button></div><h2 class="mt">Colore per tasto</h2><p class="hint">Seleziona i tasti nell’anteprima, scegli il colore e aggiungilo alla bozza. Premi Applica per salvarlo.</p><div class="row"><button data-rgb-select="all">Tutti</button><button data-rgb-select="wasd">WASD</button><button data-rgb-select="none">Nessuno</button><button id="btnRgbPaint">Colora selezione</button></div></article>
+          </div>
+        </section>
+
+        <section class="view" data-view="advanced">
+          <header class="view-head"><h1>Tasti avanzati</h1><p>Più azioni per ogni tasto. Configura un tasto alla volta e verifica la risposta nel tester.</p></header>
+          <article class="card"><p class="hint warn">Funzioni beta del protocollo KB2. Sostituiscono la funzione avanzata del tasto e possono rendere inaccessibile il suo layer Fn. Per rimuoverle usa Ripristina tasto.</p><div class="kbd-wrap"><div class="kbd" id="kbdAdvanced"></div></div></article>
+          <article class="card"><h2 id="advancedTitle">Seleziona un tasto</h2><div class="fields"><label>Comportamento<select id="advancedMode"><option value="mt">Mod-Tap · tocco / pressione lunga</option><option value="tgl">Toggle · premi per attivare, ripremi per rilasciare</option><option value="dks">DKS · azioni in due punti della corsa</option><option value="rs">Rappy Snappy · prevale il tasto più premuto</option></select></label><label>Prima funzione<select id="advancedFirst"></select></label><label id="advancedSecondLabel">Seconda funzione<select id="advancedSecond"></select></label><label id="advancedDelayLabel">Soglia pressione lunga (ms)<input id="advancedDelay" type="number" min="10" max="2550" step="10" value="200" /></label><label id="advancedTravelLabel" hidden>Punto di attuazione secondario (mm)<input id="advancedTravel" type="number" min="0.2" max="3.4" step="0.1" value="2" /></label></div><p class="hint" id="advancedHint">Un tocco invia la prima funzione; una pressione lunga attiva la seconda.</p><div class="row"><button id="btnAdvancedApply" class="primary" data-needs-device>Applica comportamento</button><button id="btnAdvancedRemove" data-needs-device>Ripristina tasto</button></div></article>
+        </section>
+
+        <section class="view" data-view="settings">
+          <header class="view-head"><h1>Dispositivo</h1><p>Profili nella memoria della tastiera, sensori e informazioni sulla connessione.</p></header>
+          <div class="grid2"><article class="card"><h2>Profili hardware</h2><p class="hint">Quattro configurazioni indipendenti. Il cambio profilo legge nuovamente mappatura, prestazioni e RGB dalla tastiera.</p><div class="seg" id="profileSeg"><button data-profile="0" data-needs-device>Profilo 1</button><button data-profile="1" data-needs-device>Profilo 2</button><button data-profile="2" data-needs-device>Profilo 3</button><button data-profile="3" data-needs-device>Profilo 4</button></div><p class="hint" id="profileReadout">La disponibilità viene verificata alla connessione.</p><button id="btnRefresh" data-needs-device>Rileggi dispositivo</button></article><article class="card"><h2>Informazioni</h2><dl class="device-info"><div><dt>Modello</dt><dd>WIN 60 HE MAX</dd></div><div><dt>Firmware</dt><dd id="deviceFirmware">—</dd></div><div><dt>Protocollo</dt><dd id="deviceProtocol">—</dd></div><div><dt>Interfaccia</dt><dd>USB · WebHID</dd></div><div><dt>Tasti rilevati</dt><dd id="deviceKeys">—</dd></div></dl></article></div>
+          <article class="card"><h2>Calibrazione guidata</h2><p class="hint">Usala dopo aver cambiato switch o se i sensori rispondono in modo anomalo. Appoggia la tastiera su una superficie stabile, libera i tasti e mantieni il cavo collegato.</p><ol class="steps"><li>Avvia senza premere alcun tasto.</li><li>Premi lentamente tutti i tasti fino in fondo, poi rilasciali.</li><li>Termina e salva, poi verifica la corsa in Test tasti.</li></ol><div class="row"><button id="btnCalibrationStart" data-needs-device>Avvia calibrazione</button><button id="btnCalibrationEnd" class="primary" disabled>Termina e salva calibrazione</button></div><p class="hint" id="calibrationStatus" role="status">Calibrazione non avviata.</p></article>
+          <article class="card"><h2>Collega e personalizza</h2><ol class="steps"><li>Apri questa pagina in Chrome o Edge su desktop, con la tastiera collegata via USB.</li><li>Chiudi le altre schede del driver AULA e premi Connetti tastiera.</li><li>Seleziona WIN 60 HE MAX nella finestra del browser.</li><li>Le modifiche vengono scritte solo quando premi Applica o Salva.</li></ol><p class="hint">Per problemi USB, scollega e ricollega il cavo e premi Connetti. Il cambio di polling o profilo può richiedere una nuova connessione.</p><h2 class="mt">Firmware e compatibilità</h2><p class="hint">Il flashing firmware non è disponibile: manca un binario ufficiale verificato con procedura di recupero. Questa versione supporta AULA WIN 60 HE MAX (1CA2:1902). Non usare firmware di altri modelli.</p><p class="hint">Le macro in memoria richiedono ancora un percorso verificabile di lettura e ripristino: non vengono scritte da questa versione.</p><a class="source-link" href="https://magnet.aulastar.com/" target="_blank" rel="noopener">Apri il driver ufficiale AULA ↗</a></article>
         </section>
 
         <!-- Log -->
@@ -292,7 +361,7 @@
       </main>
     </div>
 
-    <div class="toast" id="toast" hidden></div>
+    <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 
     <script>
       window.__aulaBooted = false;

@@ -12,7 +12,7 @@
 
 <p align="center">
   <a href="https://primebuild-pc.github.io/aula-win60he-tool/"><img alt="Open the web driver" src="https://img.shields.io/badge/Open%20the%20web%20driver-5eead4?style=for-the-badge&labelColor=0a0c10" /></a>
-  <img alt="Status: beta" src="https://img.shields.io/badge/status-beta-fbbf24?style=for-the-badge&labelColor=0a0c10" />
+  <img alt="Status: beta 0.2.0" src="https://img.shields.io/badge/status-beta%200.2.0-fbbf24?style=for-the-badge&labelColor=0a0c10" />
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-60a5fa?style=for-the-badge&labelColor=0a0c10" /></a>
   <img alt="WebHID" src="https://img.shields.io/badge/WebHID-Chrome%20%7C%20Edge-e9eef5?style=for-the-badge&labelColor=0a0c10" />
 </p>
@@ -29,6 +29,19 @@ It was built to fix a real problem: a broken Fn layer and A/D keys that stopped 
 software. If your AULA WIN 60 HE MAX has keys that send arrows instead of letters, this tool fixes it in one click.
 
 ## Features
+
+### New in 0.2.0
+
+- **RGB lighting:** static color, 20 firmware effect IDs, brightness, speed, direction, seven-color palette, per-key painting and lights off. A local color preview works before connecting. Effect names and animations depend on the firmware; the preview does not simulate them.
+- **Easier mapping:** searchable function tiles, category filters, physical key capture, a before/after preview and protection for the Fn key.
+- **Light, dark and system themes**, plus Italian/English interface preferences saved in your browser. Diagnostic logs retain their original text.
+- **SOCD on A/D and W/S**, independently, with actual configuration included in backups.
+- **Four onboard profiles**, shown only when reported by the keyboard, and a guided sensor calibration flow.
+- **Advanced keys (beta):** Mod-Tap, Toggle, DKS and Rappy Snappy, with readback and removal controls.
+- **Backup v4:** fresh readings of every key, layers, performance, SOCD, RGB and supported advanced payloads. Legacy v3 files remain importable; unknown advanced modes are rejected rather than silently dropped.
+- Faster initial diagnosis, disconnect handling, pausing sensor polling in hidden tabs, responsive navigation and accessible keyboard controls.
+
+The new hardware controls have automated packet and simulated-transport tests. **Physical validation of RGB, advanced behaviors, profile switching and calibration is still pending.** Firmware flashing and onboard macro editing are not included; see [the handoff](docs/RELEASE-0.2.0.md) for the concrete blockers.
 
 <table>
   <tr>
@@ -62,7 +75,7 @@ software. If your AULA WIN 60 HE MAX has keys that send arrows instead of letter
     </td>
     <td valign="top">
       <h3>⇩ Backup and restore</h3>
-      Save layers and per-key performance settings to a JSON file and restore them whenever you want.
+      Save layers, per-key performance, SOCD pairs, RGB and supported advanced key settings to a JSON file.
     </td>
   </tr>
 </table>
@@ -77,7 +90,7 @@ software. If your AULA WIN 60 HE MAX has keys that send arrows instead of letter
 Settings are stored in the keyboard's own memory: they stay when you unplug it or move it to another computer.
 
 > [!NOTE]
-> The interface is currently in Italian. An English translation is planned.
+> Choose Italian or English and light, dark or system theme in the top bar. Explore mapping and RGB previews before connecting.
 
 ### Default FPS profile
 
@@ -150,6 +163,9 @@ Then open `http://127.0.0.1:5199` in Chrome. On Windows you can also double-clic
 src/aula.js       keyboard protocol layer (connect, read, write, verify)
 src/keycodes.js   HID key codes, labels and physical layout
 src/main.js       user interface
+src/workspace.js  RGB, mapping tools, profiles and calibration
+src/settings.js   settings and backup validation, trigger display model
+src/i18n.js       Italian / English interface
 src/style.css     styles (dark and light theme)
 ```
 
@@ -165,6 +181,17 @@ src/style.css     styles (dark and light theme)
 - Live travel: `getRm6X21Travel()` returns a 6×21 matrix in millimetres.
 
 </details>
+
+### Verification
+
+```bash
+npm test                     # unit and real SDK packet tests with simulated USB transport
+npm run build
+npx playwright install chromium
+npm run test:e2e             # navigation, mapping, RGB drafts, themes, language, axe, responsive layouts
+```
+
+GitHub Pages CI runs the same tests before deploying. Browser tests use the production preview when no development server is already running.
 
 ## Disclaimer
 

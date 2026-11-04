@@ -1,4 +1,5 @@
 import Keyboard from '@sparklinkplayjoy/sdk-keyboard';
+import { range, validatePerformance, validateLight, validateBackup } from './settings.js';
 
 const VENDOR_ID = 0x1ca2;
 const PRODUCT_ID = 0x1902;
@@ -24,27 +25,7 @@ export const KEYCODES = {
   FN3: 61699,
 };
 
-export const KEY_NAMES = {
-  4: 'A',
-  7: 'D',
-  22: 'S',
-  26: 'W',
-  79: '->',
-  80: '<-',
-  81: 'v',
-  82: '^',
-  61696: 'Fn0',
-  61697: 'Fn1',
-  61698: 'Fn2',
-  61699: 'Fn3',
-};
-
-export const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
-export function numberOr(value, fallback) {
-  const n = Number(value);
-  return Number.isFinite(n) && n !== 0 ? n : fallback;
-}
+const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 function isBadResult(value) {
   return (
@@ -100,6 +81,7 @@ export class AulaKeyboard {
     this.device = null;
     this.state = null;
     this.backup = null;
+    this.onDisconnect = null;
   }
 
   static isSupported() {
@@ -119,7 +101,7 @@ export class AulaKeyboard {
 
     if (this.kb) {
       try {
-        await this.kb.closeDevice();
+        await this.disconnect();
       } catch (error) {
         this.log(`Chiusura sessione precedente: ${error?.message || error}`, 'warn');
       }
@@ -167,6 +149,7 @@ export class AulaKeyboard {
       const type = data?.type || 'sconosciuto';
       if (type === 'disconnect' || type === 'isUpgrading_disconnect') {
         this.log(`USB: ${type}. Ricollega la tastiera se necessario.`, 'warn');
+        this.onDisconnect?.();
       } else {
         this.log(`USB: ${type}${data?.reconnect ? ' (riconnessa)' : ''}.`);
       }
@@ -199,6 +182,23 @@ export class AulaKeyboard {
       'ok',
     );
     return device;
+  }
+
+  async disconnect() {
+    this.kb?.off('usbChange');
+    if (this.device?.data?.opened) await this.device.data.close();
+    this.kb = null;
+    this.device = null;
+    this.state = null;
+    this.initialInfo = null;
+  }
+
+  async checked(label, fn, allowEmpty = false) {
+    const result = await fn();
+    if (isBadResult(result) || result === false || (!allowEmpty && result == null)) {
+      throw new Error(`${label}: ${result?.message || 'la tastiera non ha confermato il comando'}`);
+    }
+    return result;
   }
 
   async safe(label, fn, fallback = null) {
@@ -242,11 +242,21 @@ export class AulaKeyboard {
 
   async readLayer(layout) {
     const keys = this.state?.physical?.map((p) => p.keyValue) || [];
+    return this.readRegisters(keys.map(key => ({ key, layout })));
+  }
+
+  async readRegisters(requests) {
     const result = [];
-    for (let i = 0; i < keys.length; i += 12) {
-      const chunk = await this.kb.getLayoutKeyInfo(keys.slice(i, i + 12).map((key) => ({ key, layout })));
-      if (isBadResult(chunk) || !Array.isArray(chunk)) throw new Error('Risposta layout non valida');
-      result.push(...chunk);
+    for (let i = 0; i < requests.length; i += 12) {
+      const asked = requests.slice(i, i + 12);
+      const chunk = await this.checked('Lettura registri', () => this.kb.getLayoutKeyInfo(asked));
+      if (!Array.isArray(chunk)) throw new Error('Risposta layout non valida.');
+      for (const request of asked) {
+        // The SDK may decode a trailing padding record; accept only requested addresses.
+        const entries = chunk.filter(p => p.key === request.key && p.layout === request.layout);
+        if (entries.length !== 1 || !Number.isInteger(entries[0].value)) throw new Error('Risposta layout incompleta o duplicata.');
+        result.push(entries[0]);
+      }
     }
     return result;
   }
@@ -261,7 +271,7 @@ export class AulaKeyboard {
     );
     const protocolVersion = typeof protocolRaw === 'string' ? protocolRaw : info.protocolVersion;
     const rateRaw = await this.safe('Report rate', () => this.kb.getApi({ type: 'ORDER_TYPE_ROES' }));
-    const rateIndex = Number.isFinite(Number(rateRaw)) ? Number(rateRaw) : null;
+    const rateIndex = Number.isInteger(rateRaw) && rateRaw >= 0 && rateRaw <= 6 ? rateRaw : null;
 
     const baseLayout = await this.kb.defKey();
     if (isBadResult(baseLayout) || !Array.isArray(baseLayout)) {
@@ -300,39 +310,16 @@ export class AulaKeyboard {
       D: fnMap?.get(KEYCODES.D) ?? null,
     };
 
-    const performances = [];
-    let index = 0;
-    for (const pos of physical) {
-      index += 1;
-      const modeInfo = await this.safe(`Modalità ${pos.keyValue}`, () =>
-        this.kb.getPerformanceMode(pos.keyValue),
-      );
-      let rt = null;
-      let dead = null;
-      let single = null;
-      if (
-        pos.keyValue === KEYCODES.W ||
-        pos.keyValue === KEYCODES.A ||
-        pos.keyValue === KEYCODES.S ||
-        pos.keyValue === KEYCODES.D
-      ) {
-        rt = await this.safe(`RT ${pos.keyValue}`, () => this.kb.getRtTravel(pos.keyValue));
-        dead = await this.safe(`Deadzone ${pos.keyValue}`, () => this.kb.getDpDr(pos.keyValue));
-        single = await this.safe(`Single ${pos.keyValue}`, () => this.kb.getSingleTravel(pos.keyValue));
-      }
-      performances.push({
-        ...pos,
-        touchMode: modeInfo?.touchMode ?? null,
-        advancedKeyMode: modeInfo?.advancedKeyMode ?? null,
-        rtPress: rt?.pressTravel ?? null,
-        rtRelease: rt?.releaseTravel ?? null,
-        single,
-        pressDead: dead?.pressDead ?? null,
-        releaseDead: dead?.releaseDead ?? null,
-      });
-      if (index % 15 === 0) this.log(`Diagnosi performance: ${index}/${physical.length}...`);
-    }
-
+    // Read Layout_Mode in packets instead of 61 individual requests.
+    const modes = await this.readRegisters(physical.map(p => ({ key: p.keyValue, layout: 8 })));
+    const performances = physical.map(pos => {
+      const value = modes.find(m => m.key === pos.keyValue)?.value;
+      if (!Number.isInteger(value)) throw new Error('Modalità tasto non leggibile.');
+      return { ...pos, touchMode: ['global', 'single', 'rt'][value >> 4] ?? 'single', advancedKeyMode: value & 15 };
+    });
+    const baseInfo = await this.safe('Informazioni firmware', () => this.kb.getBaseInfo());
+    if (baseInfo && typeof baseInfo === 'object') Object.assign(info, baseInfo);
+    const config = await this.safe('Profilo hardware', () => this.kb.getApi({ type: 'ORDER_TYPE_CONFIG' }));
     const rtCount = performances.filter((p) => p.touchMode === 'rt').length;
     const socdCount = performances.filter((p) => p.advancedKeyMode === 8).length;
 
@@ -353,27 +340,18 @@ export class AulaKeyboard {
       performances,
       rtCount,
       socdCount,
+      config: config?.hasFourConfig && Number.isInteger(config.configID) && config.configID >= 0 && config.configID <= 3 ? config : null,
+      socd: [], lighting: null, customLighting: [],
     };
+    for (const [a, b] of [[KEYCODES.A, KEYCODES.D], [KEYCODES.W, KEYCODES.S]]) {
+      if (performances.find(p => p.keyValue === a)?.advancedKeyMode !== 8) continue;
+      const pair = await this.checked('Lettura SOCD', () => this.kb.getSocd(a, protocolVersion));
+      if (pair.pos1 !== a || pair.pos2 !== b) throw new Error('Coppia SOCD non riconosciuta: backup interrotto.');
+      this.state.socd.push(pair);
+    }
+    this.state.lighting = await this.safe('Lettura RGB', () => this.readLighting());
+    if (this.state.lighting?.type === 'custom') await this.safe('Colori per tasto', () => this.readCustomLighting());
     return this.state;
-  }
-
-  summary() {
-    const s = this.state;
-    if (!s) return null;
-    return {
-      product: this.device?.productName || 'WIN 60 HE MAX',
-      firmware: s.info?.appVersion ?? '?',
-      protocol: s.protocolVersion ?? '?',
-      layout: s.info?.KeyboardLayout ?? '?',
-      keyType: s.info?.KeyType ?? '?',
-      runMode: s.info?.KeyboardRunMode ?? '?',
-      rate: s.rate ?? '?',
-      fnLayer: s.fnLayer,
-      fnValues: s.fnValues,
-      keys: s.physical.length,
-      rtCount: s.rtCount,
-      socdCount: s.socdCount,
-    };
   }
 
   async fixFnArrows() {
@@ -409,110 +387,52 @@ export class AulaKeyboard {
     const ok =
       [KEYCODES.W, KEYCODES.A, KEYCODES.S, KEYCODES.D].every((k) => nb.get(k) === k) &&
       FN_ARROWS.every(([, key, target]) => nf.get(key) === target);
-    this.log(
-      ok ? 'Verifica riuscita: WASD lettere sul base, frecce su Fn+WASD e Fn+/ RAlt Menu RCtrl.' : 'Verifica layer non riuscita.',
-      ok ? 'ok' : 'error',
-    );
+    if (!ok) throw new Error('Verifica layer non riuscita.');
+    this.log('Verifica riuscita: WASD lettere sul base, frecce su Fn+WASD e Fn+/ RAlt Menu RCtrl.', 'ok');
     return s.fnValues;
   }
 
   async applyRt(sensitivity = 0.15, firstTouch = 0.5) {
-    const s = this.state;
-    if (!s) throw new Error('Esegui prima la diagnosi.');
-    let updated = 0;
-    let index = 0;
-
-    for (const pos of s.physical) {
-      index += 1;
-      const modeInfo = await this.safe(`Modalità ${pos.keyValue}`, () =>
-        this.kb.getPerformanceMode(pos.keyValue),
-      );
-      const advanced = Number.isFinite(Number(modeInfo?.advancedKeyMode))
-        ? Number(modeInfo.advancedKeyMode)
-        : 0;
-
-      const modeResult = await this.safe(`RT mode ${pos.keyValue}`, () =>
-        this.kb.setPerformanceMode(pos.keyValue, 'rt', advanced),
-      );
-      if (modeResult === null) {
-        this.log(`RT modalità fallita su ${pos.keyValue}.`, 'warn');
-        continue;
-      }
-
-      // One command at a time: the device answers in order, parallel writes mixed up the values.
-      const results = [];
-      for (const write of [
-        () => this.kb.setSingleTravel(pos.keyValue, firstTouch),
-        () => this.kb.setRtPressTravel(pos.keyValue, sensitivity),
-        () => this.kb.setRtReleaseTravel(pos.keyValue, sensitivity),
-        () => this.kb.setDp(pos.keyValue, 0.15),
-        () => this.kb.setDr(pos.keyValue, 0.15),
-      ]) {
-        results.push(await this.safe(`RT valori ${pos.keyValue}`, write));
-      }
-      const failed = results.filter((r) => r === null);
-      if (failed.length > 0) {
-        this.log(`RT valori: ${failed.length} comandi falliti su ${pos.keyValue}.`, 'warn');
-      }
-      updated += 1;
-      if (index % 10 === 0) this.log(`RT: ${index}/${s.physical.length}...`);
-      await sleep(8);
-    }
-
-    this.log(`RT applicato a ${updated}/${s.physical.length} tasti (${sensitivity} mm).`, 'ok');
-    return updated;
+    const keys = this.state?.physical?.map(p => p.keyValue);
+    if (!keys) throw new Error('Connetti la tastiera.');
+    await this.writeKeyPerf(keys, {
+      touchMode: 'rt', actuation: firstTouch, rtPress: sensitivity, rtRelease: sensitivity,
+      pressDead: 0.15, releaseDead: 0.15,
+    });
+    return keys.length;
   }
 
-  // SOCD only on A/D: W/S keep their Fn arrows. Packet as the official AULA driver sends it:
-  // type 0 = bind by position; mode 0 = last wins, 1 = A wins, 2 = D wins, 3 = neutral.
-  async applySocd(mode = 0) {
-    const s = this.state;
-    if (!s) throw new Error('Esegui prima la diagnosi.');
-    const version = typeof s.protocolVersion === 'string' ? s.protocolVersion : '1.0.9';
-    const param = { pos1: KEYCODES.A, pos2: KEYCODES.D, key1: 0, key2: 0, type: 0, mode: Number(mode), delay: 0 };
-    const result = await this.safe('SOCD A/D', () => this.kb.setSocd(param, version));
-    const check = await this.safe('Verifica SOCD', () => this.kb.getPerformanceMode(KEYCODES.A));
-    if (result === null || check?.advancedKeyMode !== 8) throw new Error('SOCD A/D non applicato.');
-    this.log(`SOCD A/D: mode ${mode}.`, 'ok');
-    return true;
+  async applySocd(mode = 0, pair = [KEYCODES.A, KEYCODES.D]) {
+    range(mode, 0, 3, 'SOCD', true);
+    if (!this.state) throw new Error('Connetti la tastiera.');
+    if (![[4, 7], [26, 22]].some(p => p[0] === pair[0] && p[1] === pair[1])) throw new Error('Coppia SOCD non valida.');
+    const param = { pos1: pair[0], pos2: pair[1], key1: 0, key2: 0, type: 0, mode, delay: 0 };
+    await this.checked('Scrittura SOCD', () => this.kb.setSocd(param, this.state.protocolVersion));
+    const check = await this.checked('Verifica SOCD', () => this.kb.getSocd(pair[0], this.state.protocolVersion));
+    if (check.pos1 !== pair[0] || check.pos2 !== pair[1] || check.mode !== mode) throw new Error('SOCD non verificato.');
+    for (const key of pair) {
+      const p = await this.checked('Modalità SOCD', () => this.kb.getPerformanceMode(key));
+      if (p.advancedKeyMode !== 8) throw new Error('SOCD non attivo su entrambi i tasti.');
+      Object.assign(this.state.performances.find(p => p.keyValue === key), p);
+    }
+    this.state.socd = [...(this.state.socd || []).filter(p => p.pos1 !== pair[0]), param];
+    this.state.socdCount = this.state.performances.filter(p => p.advancedKeyMode === 8).length;
+    this.log(`SOCD ${pair.join('/')}: modalità ${mode}, verificato.`, 'ok');
   }
 
-  async removeSocd() {
-    for (const key of [KEYCODES.A, KEYCODES.D]) {
-      await this.safe(`Rimozione SOCD ${key}`, () => this.kb.setPerformanceMode(key, 'rt', 0));
+  async removeSocd(pair = [KEYCODES.A, KEYCODES.D]) {
+    for (const key of pair) {
+      const old = await this.checked('Modalità attuale', () => this.kb.getPerformanceMode(key));
+      await this.checked('Rimozione SOCD', () => this.kb.setPerformanceMode(key, old.touchMode, 0));
+      const check = await this.checked('Verifica rimozione SOCD', () => this.kb.getPerformanceMode(key));
+      if (check.advancedKeyMode !== 0) throw new Error('Rimozione SOCD non verificata.');
+      Object.assign(this.state.performances.find(p => p.keyValue === key), check);
     }
-    this.log('SOCD rimosso da A/D.', 'ok');
+    this.state.socd = (this.state.socd || []).filter(p => p.pos1 !== pair[0]);
+    this.state.socdCount = this.state.performances.filter(p => p.advancedKeyMode === 8).length;
   }
 
-  async applyRate() {
-    const s = this.state;
-    if (!s) throw new Error('Esegui prima la diagnosi.');
-
-    let target = 0; // 0 = 8KHz
-    this.log(`Imposto report rate ${RATE_LABELS[target]} (valore ${target})...`);
-    let result = await this.safe('Set report rate 8K', () => this.kb.setRateOfReturn(target));
-    if (result === null) {
-      target = 3; // 3 = 1KHz
-      this.log('8KHz non accettato; provo 1KHz.', 'warn');
-      result = await this.safe('Set report rate 1K', () => this.kb.setRateOfReturn(target));
-    }
-    if (result === null) {
-      throw new Error('Impostazione report rate fallita.');
-    }
-
-    const currentRaw = await this.safe('Verifica report rate', () =>
-      this.kb.getApi({ type: 'ORDER_TYPE_ROES' }),
-    );
-    if (Number.isFinite(Number(currentRaw))) {
-      s.rateIndex = Number(currentRaw);
-      s.rate = RATE_LABELS[s.rateIndex] ?? String(s.rateIndex);
-    } else {
-      s.rateIndex = target;
-      s.rate = RATE_LABELS[target] ?? String(target);
-    }
-    this.log(`Report rate attuale: ${s.rate}.`, 'ok');
-    return { rateIndex: s.rateIndex, rate: s.rate };
-  }
+  async applyRate() { return this.setRate(0); }
 
   async applyProfile({ sensitivity = 0.15, firstTouch = 0.5, socdMode = 0, want8k = true } = {}) {
     const steps = [];
@@ -539,8 +459,8 @@ export class AulaKeyboard {
     const rt = await this.kb.getRtTravel(key);
     const single = await this.kb.getSingleTravel(key);
     const dead = await this.kb.getDpDr(key);
-    if ([mode, rt, single, dead].some(isBadResult)) throw new Error(`Lettura tasto ${key} fallita.`);
-    return {
+    if ([mode, rt, single, dead].some(v => v == null || isBadResult(v))) throw new Error(`Lettura tasto ${key} fallita.`);
+    const values = {
       touchMode: mode.touchMode,
       advancedKeyMode: mode.advancedKeyMode,
       actuation: Number(single),
@@ -549,38 +469,52 @@ export class AulaKeyboard {
       pressDead: dead.pressDead,
       releaseDead: dead.releaseDead,
     };
+    if (!['global', 'single', 'rt'].includes(values.touchMode) || !Number.isInteger(values.advancedKeyMode) ||
+        ['actuation', 'rtPress', 'rtRelease', 'pressDead', 'releaseDead'].some(field => !Number.isFinite(values[field]))) throw new Error(`Valori incompleti per il tasto ${key}.`);
+    return values;
   }
 
   // Writes one command at a time and keeps each key's advanced mode (SOCD etc.).
-  async writeKeyPerf(keys, { touchMode, actuation, rtPress, rtRelease, pressDead, releaseDead }, onProgress) {
+  async writeKeyPerf(keys, values, onProgress) {
+    validatePerformance(values);
+    const { touchMode, actuation, rtPress, rtRelease, pressDead, releaseDead } = values;
     let done = 0;
     for (const key of keys) {
-      const current = await this.kb.getPerformanceMode(key);
-      const advanced = Number(current?.advancedKeyMode) || 0;
-      await this.kb.setPerformanceMode(key, touchMode, advanced);
-      await this.kb.setSingleTravel(key, actuation);
+      if (!this.state?.physical.some(p => p.keyValue === key)) throw new Error('Tasto assente sulla tastiera.');
+      const current = await this.checked('Lettura modalità', () => this.kb.getPerformanceMode(key));
+      await this.checked('Scrittura modalità', () => this.kb.setPerformanceMode(key, touchMode, current.advancedKeyMode));
+      await this.checked('Attuazione', () => this.kb.setSingleTravel(key, actuation));
       if (touchMode === 'rt') {
-        await this.kb.setRtPressTravel(key, rtPress);
-        await this.kb.setRtReleaseTravel(key, rtRelease);
+        await this.checked('RT pressione', () => this.kb.setRtPressTravel(key, rtPress));
+        await this.checked('RT rilascio', () => this.kb.setRtReleaseTravel(key, rtRelease));
       }
-      await this.kb.setDp(key, pressDead);
-      await this.kb.setDr(key, releaseDead);
-      const perf = this.state?.performances?.find((p) => p.keyValue === key);
-      if (perf) perf.touchMode = touchMode;
-      done += 1;
-      onProgress?.(done, keys.length);
+      await this.checked('Zona morta alta', () => this.kb.setDp(key, pressDead));
+      await this.checked('Zona morta bassa', () => this.kb.setDr(key, releaseDead));
+      const stored = await this.readKeyPerf(key);
+      for (const field of ['actuation', 'pressDead', 'releaseDead', ...(touchMode === 'rt' ? ['rtPress', 'rtRelease'] : [])]) {
+        if (Math.abs(stored[field] - values[field]) > 0.011) throw new Error(`${key}: ${field} non verificato.`);
+      }
+      if (stored.touchMode !== touchMode || stored.advancedKeyMode !== current.advancedKeyMode) throw new Error('Modalità non verificata.');
+      Object.assign(this.state.performances.find(p => p.keyValue === key), stored, { single: stored.actuation });
+      onProgress?.(++done, keys.length);
     }
-    if (this.state) this.state.rtCount = this.state.performances.filter((p) => p.touchMode === 'rt').length;
-    this.log(`Prestazioni scritte su ${done} tasti.`, 'ok');
+    this.state.rtCount = this.state.performances.filter(p => p.touchMode === 'rt').length;
+    this.log(`Prestazioni scritte e verificate su ${done} tasti.`, 'ok');
   }
 
   async setMapping(layout, key, value) {
+    range(layout, 0, 3, 'Layer', true);
+    range(value, 0, 65535, 'Funzione', true);
+    if (!this.state?.physical.some(p => p.keyValue === key)) throw new Error('Tasto non valido.');
+    if (layout === BASE_LAYER && [1, KEYCODES.FN0, KEYCODES.FN1, KEYCODES.FN2, KEYCODES.FN3].includes(key) && value !== this.state.layerMaps[0].get(key)) throw new Error('Il tasto Fn deve restare accessibile.');
     const result = await this.kb.setKey([{ key, layout, value }]);
-    if (isBadResult(result)) throw result;
-    const check = await this.kb.getLayoutKeyInfo([{ key, layout }]);
+    if (isBadResult(result) || result == null || result === false) throw new Error('Scrittura mappatura fallita.');
+    const check = await this.readRegisters([{ key, layout }]);
     const stored = Array.isArray(check) ? check[0]?.value : undefined;
     if (stored !== value) throw new Error(`Mappatura non verificata (letto ${stored}).`);
     this.state?.layerMaps?.[layout]?.set(key, value);
+    const entry = this.state?.layers?.[layout]?.find(p => p.key === key);
+    if (entry) entry.value = value;
     if (layout === FN_LAYER && this.state) {
       const m = this.state.layerMaps[FN_LAYER];
       this.state.fnValues = { W: m.get(KEYCODES.W), A: m.get(KEYCODES.A), S: m.get(KEYCODES.S), D: m.get(KEYCODES.D) };
@@ -588,14 +522,136 @@ export class AulaKeyboard {
   }
 
   async setRate(index) {
-    const result = await this.kb.setRateOfReturn(index);
-    if (isBadResult(result)) throw result;
-    const current = await this.safe('Verifica report rate', () => this.kb.getApi({ type: 'ORDER_TYPE_ROES' }));
-    if (this.state && Number.isFinite(Number(current))) {
-      this.state.rateIndex = Number(current);
-      this.state.rate = RATE_LABELS[this.state.rateIndex] ?? String(current);
+    range(index, 0, 6, 'Polling', true);
+    await this.checked('Polling', () => this.kb.setRateOfReturn(index));
+    const current = await this.checked('Verifica polling', () => this.kb.getApi({ type: 'ORDER_TYPE_ROES' }));
+    if (typeof current !== 'number' || current !== index) throw new Error('Polling non verificato. Riconnetti per leggere lo stato attuale.');
+    this.state.rateIndex = current;
+    this.state.rate = RATE_LABELS[current];
+    this.log(`Polling verificato: ${this.state.rate}.`, 'ok');
+  }
+
+  async readLighting() {
+    const light = await this.checked('Lettura RGB', () => this.kb.getLighting(this.state.protocolVersion));
+    validateLight(light);
+    this.state.lighting = light;
+    return light;
+  }
+
+  async writeLighting(light) {
+    validateLight(light);
+    await this.checked('Scrittura RGB', () => this.kb.setLighting(light, this.state.protocolVersion));
+    if (!light.open) await this.checked('Spegnimento RGB', () => this.kb.closedLighting());
+    const check = await this.readLighting();
+    for (const field of ['open', 'mode', 'luminance', 'speed', 'direction', 'staticColor']) {
+      const expected = field === 'mode' ? (light.type === 'custom' ? 21 : light.type === 'static' ? 0 : light.mode) : light[field];
+      if (check[field] !== expected) throw new Error(`RGB: ${field} non verificato.`);
     }
-    this.log(`Report rate: ${this.state?.rate ?? RATE_LABELS[index]}.`, 'ok');
+    if (check.colors.some((c, i) => c.toLowerCase() !== light.colors[i].toLowerCase())) throw new Error('Palette RGB non verificata.');
+    this.log('Illuminazione salvata e verificata.', 'ok');
+    return check;
+  }
+
+  async readCustomLighting() {
+    const colors = [];
+    for (const p of this.state.physical) {
+      const c = await this.checked('Lettura colore per tasto', () => this.kb.getCustomLighting(p.keyValue));
+      const color = { key: p.keyValue, r: c.r ?? c.R, g: c.g ?? c.G, b: c.b ?? c.B };
+      for (const channel of ['r', 'g', 'b']) range(color[channel], 0, 255, channel, true);
+      colors.push(color);
+    }
+    this.state.customLighting = colors;
+    return colors;
+  }
+
+  async writeCustomLighting(colors) {
+    for (const c of colors) {
+      if (!this.state.physical.some(p => p.keyValue === c.key)) throw new Error('Tasto RGB non valido.');
+      for (const channel of ['r', 'g', 'b']) range(c[channel], 0, 255, channel, true);
+      await this.checked('Colore per tasto', () => this.kb.setCustomLighting(c));
+      const check = await this.checked('Verifica colore', () => this.kb.getCustomLighting(c.key));
+      if (['r', 'g', 'b'].some(k => (check[k] ?? check[k.toUpperCase()]) !== c[k])) throw new Error('Colore per tasto non verificato.');
+    }
+    await this.checked('Salvataggio colori', () => this.kb.saveCustomLighting(), true);
+    const map = new Map((this.state.customLighting || []).map(c => [c.key, c]));
+    colors.forEach(c => map.set(c.key, c));
+    this.state.customLighting = [...map.values()];
+  }
+
+  async switchProfile(index) {
+    range(index, 0, 3, 'Profilo', true);
+    if (!this.state.config?.hasFourConfig) throw new Error('Profili hardware non supportati.');
+    await this.checked('Cambio profilo', () => this.kb.switchConfig(index));
+    const check = await this.checked('Verifica profilo', () => this.kb.getApi({ type: 'ORDER_TYPE_CONFIG' }));
+    if (check.configID !== index) throw new Error('Profilo non verificato: riconnetti la tastiera.');
+  }
+
+  async readAdvanced(key, mode) {
+    const layouts = { 1: [5, 6, 7, 9, 10, 11, 12, 13, 14, 15, 16], 3: [9, 10, 11, 12, 19], 4: [9, 19], 9: [32] }[mode];
+    if (!layouts) throw new Error('Questa funzione avanzata non è esportabile.');
+    const values = await this.readRegisters(layouts.map(layout => ({ key, layout })));
+    if (!Array.isArray(values) || values.length !== layouts.length || layouts.some(layout => !values.some(v => v.key === key && v.layout === layout && Number.isInteger(v.value)))) throw new Error('Funzione avanzata incompleta.');
+    return { key, mode, values: values.map(({ layout, value }) => ({ layout, value })) };
+  }
+
+  async writeAdvanced(key, type, { first, second, delay, travel }) {
+    if (!this.state?.physical.some(p => p.keyValue === key) || [1, KEYCODES.FN0, KEYCODES.FN1, KEYCODES.FN2, KEYCODES.FN3].includes(key)) throw new Error('Seleziona un tasto diverso da Fn.');
+    const old = await this.readKeyPerf(key);
+    if (old.advancedKeyMode === 8 || old.advancedKeyMode === 9) throw new Error('Rimuovi prima la coppia SOCD o Rappy Snappy.');
+    range(first, 1, 65535, 'Prima funzione', true);
+    range(second, 1, 65535, 'Seconda funzione', true);
+    range(delay, 10, 2550, 'Soglia pressione lunga', true);
+    const mode = { dks: 1, mt: 3, tgl: 4, rs: 9 }[type];
+    if (!mode) throw new Error('Comportamento non valido.');
+    const expected = [];
+    if (type === 'mt') {
+      await this.checked('Mod-Tap', () => this.kb.setMT({ key, dks: [first, second, 0, 0], delay: delay / 10 }));
+      expected.push([9, first], [10, second], [19, delay / 10]);
+    } else if (type === 'tgl') {
+      await this.checked('Toggle', () => this.kb.setTGL({ key, dks: first, delay }));
+      expected.push([9, first], [19, delay / 10]);
+    } else if (type === 'dks') {
+      range(travel, 0.6, 3.4, 'Seconda attuazione');
+      // TRPS uses four press/release edges, encoded as action bit masks.
+      await this.checked('DKS', () => this.kb.setDks({ key, dks: [first, second, 0, 0], trps: [1, 2, 2, 1], dbs: [500, Math.round(travel * 1000)] }));
+      expected.push([9, first], [10, second], [5, 500], [7, Math.round(travel * 1000)], [13, 1], [14, 2], [15, 2], [16, 1]);
+    } else {
+      if (key === first || !this.state.physical.some(p => p.keyValue === first) || [1, KEYCODES.FN0, KEYCODES.FN1, KEYCODES.FN2, KEYCODES.FN3].includes(first)) throw new Error('Scegli un secondo tasto fisico diverso da Fn.');
+      const partner = await this.readKeyPerf(first);
+      if (partner.advancedKeyMode !== 0) throw new Error('Il secondo tasto ha già una funzione avanzata.');
+      await this.checked('Rappy Snappy', () => this.kb.setRS({ key, dks: first }));
+      await this.checked('Modalità secondo tasto', () => this.kb.setPerformanceMode(first, partner.touchMode, mode));
+      const pair = await this.checked('Verifica Rappy Snappy', () => this.kb.getRS(key));
+      if (![pair.dks1, pair.dks2].includes(key) || ![pair.dks1, pair.dks2].includes(first)) throw new Error('Coppia Rappy Snappy non verificata.');
+      const partnerCheck = await this.checked('Verifica secondo tasto', () => this.kb.getPerformanceMode(first));
+      if (partnerCheck.advancedKeyMode !== mode) throw new Error('Secondo tasto Rappy Snappy non verificato.');
+    }
+    await this.checked('Modalità avanzata', () => this.kb.setPerformanceMode(key, old.touchMode, mode));
+    const check = await this.checked('Verifica modalità', () => this.kb.getPerformanceMode(key));
+    if (check.advancedKeyMode !== mode) throw new Error('Modalità avanzata non verificata.');
+    if (expected.length) {
+      const values = await this.readAdvanced(key, mode);
+      if (expected.some(([layout, value]) => values.values.find(v => v.layout === layout)?.value !== value)) throw new Error('Funzione avanzata non verificata.');
+    }
+  }
+
+  async removeAdvanced(key) {
+    const mode = await this.checked('Modalità tasto', () => this.kb.getPerformanceMode(key));
+    const socd = this.state?.socd?.find(p => p.pos1 === key || p.pos2 === key);
+    if (socd) return this.removeSocd([socd.pos1, socd.pos2]);
+    const keys = [key];
+    if (mode.advancedKeyMode === 9) {
+      const pair = await this.checked('Coppia Rappy Snappy', () => this.kb.getRS(key));
+      const partner = [pair.dks1, pair.dks2].find(k => k !== key);
+      if (!this.state.physical.some(p => p.keyValue === partner)) throw new Error('Coppia Rappy Snappy non leggibile.');
+      keys.push(partner);
+    }
+    for (const k of new Set(keys)) {
+      const old = await this.checked('Modalità attuale', () => this.kb.getPerformanceMode(k));
+      await this.checked('Rimozione funzione', () => this.kb.setPerformanceMode(k, old.touchMode, 0));
+      const check = await this.checked('Verifica rimozione', () => this.kb.getPerformanceMode(k));
+      if (check.advancedKeyMode !== 0) throw new Error('Rimozione non verificata.');
+    }
   }
 
   // Live travel of every key in mm, as a 6x21 matrix indexed like defKey rows/cols.
@@ -605,95 +661,104 @@ export class AulaKeyboard {
     return r.travels;
   }
 
+  async captureBackup(onProgress) {
+    if (!this.state) throw new Error('Connetti la tastiera.');
+    // Refresh both layers before exporting; never reuse the connect-time snapshot.
+    for (let layer = 0; layer < 4; layer++) {
+      this.state.layers[layer] = await this.readLayer(layer);
+      this.state.layerMaps[layer] = this.layerMap(this.state.layers[layer]);
+    }
+    for (let i = 0; i < this.state.performances.length; i++) {
+      const p = this.state.performances[i];
+      const perf = await this.readKeyPerf(p.keyValue);
+      Object.assign(p, perf, { single: perf.actuation });
+      onProgress?.(i + 1, this.state.performances.length);
+    }
+    // Unsupported advanced payloads cannot be restored faithfully by this backup.
+    if (this.state.performances.some(p => ![0, 1, 3, 4, 8, 9].includes(p.advancedKeyMode))) throw new Error('Backup interrotto: sono presenti funzioni avanzate non esportabili da questa versione.');
+    this.state.advanced = [];
+    for (const p of this.state.performances) if ([1, 3, 4, 9].includes(p.advancedKeyMode)) this.state.advanced.push(await this.readAdvanced(p.keyValue, p.advancedKeyMode));
+    this.state.socd = [];
+    for (const pair of [[4, 7], [26, 22]]) {
+      if (this.state.performances.find(p => p.keyValue === pair[0])?.advancedKeyMode === 8) {
+        this.state.socd.push(await this.checked('Backup SOCD', () => this.kb.getSocd(pair[0], this.state.protocolVersion)));
+      }
+    }
+    await this.readLighting();
+    await this.readCustomLighting();
+    return this.exportBackup();
+  }
+
   exportBackup() {
-    if (!this.state) throw new Error('Esegui prima la diagnosi.');
+    if (!this.state) throw new Error('Connetti la tastiera.');
     const s = this.state;
-    return {
-      schema: 3,
-      createdAt: new Date().toISOString(),
-      product: this.device?.productName || 'WIN 60 HE MAX',
-      device: { vendorId: this.device?.vendorId, productId: this.device?.productId },
-      info: s.info,
-      protocolVersion: s.protocolVersion,
-      rateIndex: s.rateIndex,
-      rate: s.rate,
-      baseLayout: s.baseLayout,
-      physical: s.physical,
-      positions: s.positions,
-      layers: s.layers,
-      fnLayer: s.fnLayer,
-      fnValues: s.fnValues,
-      performances: s.performances,
-      rtCount: s.rtCount,
-      socdCount: s.socdCount,
-    };
+    return validateBackup({
+      schema: 4, createdAt: new Date().toISOString(), product: this.device?.productName || 'WIN 60 HE MAX',
+      device: { vendorId: VENDOR_ID, productId: PRODUCT_ID }, protocolVersion: s.protocolVersion,
+      rateIndex: s.rateIndex, layers: s.layers, performances: s.performances,
+      socd: s.socd, lighting: s.lighting, customLighting: s.customLighting, advanced: s.advanced || [],
+    });
   }
 
   loadBackup(data) {
-    if (!data || data.schema !== 3 || !Array.isArray(data.layers) || !Array.isArray(data.performances)) {
-      throw new Error('Backup non valido o di una versione precedente.');
-    }
-    this.backup = data;
-    this.log(`Backup caricato: ${data.createdAt || 'senza data'}.`, 'ok');
+    this.backup = validateBackup(data);
     return data;
   }
 
   async restoreBackup() {
-    if (!this.backup) throw new Error('Carica prima un file di backup.');
-    if (!this.kb) throw new Error('Connetti la tastiera.');
-    const b = this.backup;
-
-    let keyUpdates = 0;
-    for (let layout = 0; layout < b.layers.length; layout += 1) {
-      const layer = b.layers[layout];
-      if (!Array.isArray(layer)) continue;
-      const updates = layer.filter((i) => typeof i?.key === 'number').map((i) => ({ key: i.key, layout, value: i.value }));
-      for (let i = 0; i < updates.length; i += 12) {
-        const part = updates.slice(i, i + 12);
-        const result = await this.safe(`Ripristino layer ${layout}`, () => this.kb.setKey(part));
-        if (result !== null) keyUpdates += part.length;
-      }
+    if (!this.backup || !this.state) throw new Error('Connetti la tastiera e carica un backup.');
+    const b = validateBackup(this.backup);
+    const keys = new Set(this.state.physical.map(p => p.keyValue));
+    for (const layer of b.layers) for (const p of layer || []) if (!keys.has(p.key)) throw new Error('Layout del backup incompatibile.');
+    for (const p of b.performances) {
+      if (!keys.has(p.keyValue)) throw new Error('Tasto del backup incompatibile.');
+      if (![0, 8, null, undefined].includes(p.advancedKeyMode) && !b.advanced?.some(a => a.key === p.keyValue && a.mode === p.advancedKeyMode)) throw new Error('Il backup contiene funzioni avanzate incomplete.');
     }
-
-    let perfCount = 0;
-    for (const entry of b.performances) {
-      const mode = entry.touchMode || 'single';
-      await this.safe(`Ripristino RT ${entry.keyValue}`, () =>
-        this.kb.setPerformanceMode(entry.keyValue, mode, Number(entry.advancedKeyMode) || 0),
-      );
-      if (Number.isFinite(Number(entry.single))) {
-        await this.safe(`Ripristino single ${entry.keyValue}`, () =>
-          this.kb.setSingleTravel(entry.keyValue, Number(entry.single)),
-        );
-      }
-      if (Number.isFinite(Number(entry.rtPress))) {
-        await this.safe(`Ripristino RT press ${entry.keyValue}`, () =>
-          this.kb.setRtPressTravel(entry.keyValue, Number(entry.rtPress)),
-        );
-      }
-      if (Number.isFinite(Number(entry.rtRelease))) {
-        await this.safe(`Ripristino RT release ${entry.keyValue}`, () =>
-          this.kb.setRtReleaseTravel(entry.keyValue, Number(entry.rtRelease)),
-        );
-      }
-      if (Number.isFinite(Number(entry.pressDead))) {
-        await this.safe(`Ripristino dp ${entry.keyValue}`, () =>
-          this.kb.setDp(entry.keyValue, Number(entry.pressDead)),
-        );
-      }
-      if (Number.isFinite(Number(entry.releaseDead))) {
-        await this.safe(`Ripristino dr ${entry.keyValue}`, () =>
-          this.kb.setDr(entry.keyValue, Number(entry.releaseDead)),
-        );
-      }
-      perfCount += 1;
-      await sleep(8);
+    for (const a of b.advanced || []) if (!keys.has(a.key) || !b.performances.some(p => p.keyValue === a.key && p.advancedKeyMode === a.mode)) throw new Error('Funzione avanzata incompatibile con il backup.');
+    for (const c of b.customLighting || []) if (!keys.has(c.key)) throw new Error('Tasto RGB del backup incompatibile.');
+    // Validate every entry before sending the first write, including Fn access.
+    const fnKeys = this.state.physical.filter(p => [1, KEYCODES.FN0, KEYCODES.FN1, KEYCODES.FN2, KEYCODES.FN3].includes(p.keyValue));
+    for (const p of fnKeys) {
+      if (b.performances.some(k => k.keyValue === p.keyValue && k.advancedKeyMode != null && k.advancedKeyMode !== 0)) throw new Error('Le funzioni avanzate non possono sostituire Fn.');
+      const entry = b.layers[0]?.find(e => e.key === p.keyValue);
+      if (entry && entry.value !== this.state.layerMaps[0].get(p.keyValue)) throw new Error('Il backup modifica il tasto Fn: ripristino interrotto.');
     }
-
-    if (Number.isFinite(Number(b.rateIndex))) {
-      await this.safe('Ripristino report rate', () => this.kb.setRateOfReturn(Number(b.rateIndex)));
+    for (const pair of [...(this.state.socd || [])]) await this.removeSocd([pair.pos1, pair.pos2]);
+    for (let layer = 0; layer < b.layers.length; layer++) {
+      for (const p of b.layers[layer] || []) await this.setMapping(layer, p.key, p.value);
     }
-
-    this.log(`Ripristino completato: ${keyUpdates} chiavi di layout, ${perfCount} tasti.`, 'ok');
+    for (const p of b.performances) {
+      // Restore exact micron values, including valid zero/default values from firmware.
+      const fields = { single: 4, rtPress: 20, rtRelease: 21, pressDead: 22, releaseDead: 23 };
+      for (const [field, layout] of Object.entries(fields)) {
+        if (p[field] == null) continue;
+        const value = Math.round(p[field] * 1000);
+        await this.checked('Ripristino prestazioni', () => this.kb.setKey([{ key: p.keyValue, layout, value }]));
+        const check = await this.readRegisters([{ key: p.keyValue, layout }]);
+        if (check[0].value !== value) throw new Error('Prestazioni non ripristinate.');
+      }
+      const old = await this.readKeyPerf(p.keyValue);
+      const mode = p.touchMode ?? old.touchMode;
+      await this.checked('Ripristino modalità', () => this.kb.setPerformanceMode(p.keyValue, mode, 0));
+      const check = await this.readKeyPerf(p.keyValue);
+      if (check.touchMode !== mode || check.advancedKeyMode !== 0) throw new Error('Modalità non ripristinata.');
+      Object.assign(this.state.performances.find(k => k.keyValue === p.keyValue), check, { single: check.actuation });
+    }
+    for (const pair of b.socd || []) await this.applySocd(pair.mode, [pair.pos1, pair.pos2]);
+    for (const advanced of b.advanced || []) {
+      for (const entry of advanced.values) {
+        await this.checked('Ripristino funzione avanzata', () => this.kb.setKey([{ key: advanced.key, ...entry }]));
+        const check = await this.readRegisters([{ key: advanced.key, layout: entry.layout }]);
+        if (check[0]?.value !== entry.value) throw new Error('Ripristino funzione avanzata non verificato.');
+      }
+      const old = await this.readKeyPerf(advanced.key);
+      await this.checked('Ripristino modalità avanzata', () => this.kb.setPerformanceMode(advanced.key, old.touchMode, advanced.mode));
+      const check = await this.checked('Verifica modalità avanzata', () => this.kb.getPerformanceMode(advanced.key));
+      if (check.advancedKeyMode !== advanced.mode) throw new Error('Modalità avanzata non ripristinata.');
+    }
+    if (b.customLighting?.length) await this.writeCustomLighting(b.customLighting);
+    if (b.lighting) await this.writeLighting(b.lighting);
+    if (b.rateIndex != null) await this.setRate(b.rateIndex);
+    this.log('Backup ripristinato e verificato.', 'ok');
   }
 }
