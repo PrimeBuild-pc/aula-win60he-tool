@@ -1,5 +1,6 @@
 import Keyboard from '@sparklinkplayjoy/sdk-keyboard';
 import { range, validatePerformance, validateLight, validateBackup } from './settings.js';
+import { ADVANCED_MODES, advancedRegisters, validateMacro } from './advanced.js';
 
 const VENDOR_ID = 0x1ca2;
 const PRODUCT_ID = 0x1902;
@@ -85,7 +86,7 @@ export class AulaKeyboard {
   }
 
   static isSupported() {
-    return typeof navigator !== 'undefined' && 'hid' in navigator;
+    return typeof navigator !== 'undefined' && typeof navigator.hid?.getDevices === 'function' && typeof navigator.hid?.requestDevice === 'function';
   }
 
   async sendRawSync(hidDevice) {
@@ -343,6 +344,16 @@ export class AulaKeyboard {
       config: config?.hasFourConfig && Number.isInteger(config.configID) && config.configID >= 0 && config.configID <= 3 ? config : null,
       socd: [], lighting: null, customLighting: [],
     };
+    this.state.macros = [];
+    try {
+      const cached = JSON.parse(localStorage.getItem(`studio-macro-${config?.configID ?? 0}`) || '[]');
+      if (Array.isArray(cached)) for (const macro of cached) {
+        validateMacro(macro.events);
+        if (performances.find(p => p.keyValue === macro.key)?.advancedKeyMode !== 6) continue;
+        const binding = await this.checked('Lettura macro', () => this.kb.getMacro(macro.key));
+        if (['key', 'id', 'len', 'mode', 'num', 'delay'].every(field => binding[field] === macro.binding[field])) this.state.macros.push(macro);
+      }
+    } catch (error) { this.log(`Archivio macro locale: ${error.message}`, 'warn'); }
     for (const [a, b] of [[KEYCODES.A, KEYCODES.D], [KEYCODES.W, KEYCODES.S]]) {
       if (performances.find(p => p.keyValue === a)?.advancedKeyMode !== 8) continue;
       const pair = await this.checked('Lettura SOCD', () => this.kb.getSocd(a, protocolVersion));
@@ -351,6 +362,8 @@ export class AulaKeyboard {
     }
     this.state.lighting = await this.safe('Lettura RGB', () => this.readLighting());
     if (this.state.lighting?.type === 'custom') await this.safe('Colori per tasto', () => this.readCustomLighting());
+    this.state.globalPerformance = await this.safe('Attuazione globale', () => this.readGlobalPerformance());
+    this.state.system = await this.safe('Modalità sistema', () => this.kb.getApi({ type: 'ORDER_TYPE_QUERY_WIN_MODEL' }));
     return this.state;
   }
 
@@ -478,11 +491,18 @@ export class AulaKeyboard {
   async writeKeyPerf(keys, values, onProgress) {
     validatePerformance(values);
     const { touchMode, actuation, rtPress, rtRelease, pressDead, releaseDead } = values;
+    if (touchMode === 'global') await this.writeGlobalPerformance({ globalTouchTravel: actuation, pressDead, releaseDead });
     let done = 0;
     for (const key of keys) {
       if (!this.state?.physical.some(p => p.keyValue === key)) throw new Error('Tasto assente sulla tastiera.');
       const current = await this.checked('Lettura modalità', () => this.kb.getPerformanceMode(key));
       await this.checked('Scrittura modalità', () => this.kb.setPerformanceMode(key, touchMode, current.advancedKeyMode));
+      if (touchMode === 'global') {
+        const check = await this.checked('Verifica modalità globale', () => this.kb.getPerformanceMode(key));
+        if (check.touchMode !== 'global' || check.advancedKeyMode !== current.advancedKeyMode) throw new Error('Modalità globale non verificata.');
+        Object.assign(this.state.performances.find(p => p.keyValue === key), check);
+        onProgress?.(++done, keys.length); continue;
+      }
       await this.checked('Attuazione', () => this.kb.setSingleTravel(key, actuation));
       if (touchMode === 'rt') {
         await this.checked('RT pressione', () => this.kb.setRtPressTravel(key, rtPress));
@@ -521,6 +541,30 @@ export class AulaKeyboard {
     }
   }
 
+  async writeGlobalPerformance(values) {
+    range(values.globalTouchTravel, 0.1, 3.4, 'Attuazione globale');
+    range(values.pressDead, 0, 1, 'Zona morta alta'); range(values.releaseDead, 0, 1, 'Zona morta bassa');
+    await this.checked('Attuazione globale', () => this.kb.setDB(values));
+    const check = await this.checked('Verifica attuazione globale', () => this.kb.getGlobalTouchTravel());
+    if (['globalTouchTravel', 'pressDead', 'releaseDead'].some(field => !Number.isFinite(check[field]) || Math.abs(check[field] - values[field]) > 0.011)) throw new Error('Attuazione globale non verificata.');
+    this.state.globalPerformance = check;
+  }
+
+  async readGlobalPerformance() {
+    const values = await this.checked('Attuazione globale', () => this.kb.getGlobalTouchTravel());
+    range(values.globalTouchTravel, 0.1, 3.4, 'Attuazione globale');
+    range(values.pressDead, 0, 1, 'Zona morta globale'); range(values.releaseDead, 0, 1, 'Zona morta globale');
+    return values;
+  }
+
+  async switchSystem(system) {
+    if (!['win', 'mac'].includes(system)) throw new Error('Sistema non valido.');
+    await this.checked('Cambio sistema', () => this.kb.switchSystemMode(system));
+    const check = await this.checked('Verifica sistema', () => this.kb.getApi({ type: 'ORDER_TYPE_QUERY_WIN_MODEL' }));
+    if (check.currentSystem !== system) throw new Error('Modalità sistema non verificata.');
+    this.state.system = check;
+  }
+
   async setRate(index) {
     range(index, 0, 6, 'Polling', true);
     await this.checked('Polling', () => this.kb.setRateOfReturn(index));
@@ -543,8 +587,8 @@ export class AulaKeyboard {
     await this.checked('Scrittura RGB', () => this.kb.setLighting(light, this.state.protocolVersion));
     if (!light.open) await this.checked('Spegnimento RGB', () => this.kb.closedLighting());
     const check = await this.readLighting();
-    for (const field of ['open', 'mode', 'luminance', 'speed', 'direction', 'staticColor']) {
-      const expected = field === 'mode' ? (light.type === 'custom' ? 21 : light.type === 'static' ? 0 : light.mode) : light[field];
+    for (const field of ['open', 'mode', 'luminance', 'speed', 'direction', 'staticColor', 'dynamicColorId', 'sleepDelay', 'superResponse']) {
+      const expected = field === 'mode' ? (light.type === 'custom' ? 21 : light.type === 'static' ? 0 : light.mode) : field === 'staticColor' && light.type === 'dynamic' ? 0 : light[field];
       if (check[field] !== expected) throw new Error(`RGB: ${field} non verificato.`);
     }
     if (check.colors.some((c, i) => c.toLowerCase() !== light.colors[i].toLowerCase())) throw new Error('Palette RGB non verificata.');
@@ -564,15 +608,26 @@ export class AulaKeyboard {
     return colors;
   }
 
+  async applyLighting(light, colors = []) {
+    // The firmware must be in custom mode before accepting per-key edits.
+    await this.writeLighting(light);
+    if (light.type === 'custom' && colors.length) await this.writeCustomLighting(colors);
+    return this.state.lighting;
+  }
+
   async writeCustomLighting(colors) {
     for (const c of colors) {
       if (!this.state.physical.some(p => p.keyValue === c.key)) throw new Error('Tasto RGB non valido.');
       for (const channel of ['r', 'g', 'b']) range(c[channel], 0, 255, channel, true);
       await this.checked('Colore per tasto', () => this.kb.setCustomLighting(c));
       const check = await this.checked('Verifica colore', () => this.kb.getCustomLighting(c.key));
-      if (['r', 'g', 'b'].some(k => (check[k] ?? check[k.toUpperCase()]) !== c[k])) throw new Error('Colore per tasto non verificato.');
+      if (check.key !== c.key || ['r', 'g', 'b'].some(k => (check[k] ?? check[k.toUpperCase()]) !== c[k])) throw new Error('Colore per tasto non verificato.');
     }
     await this.checked('Salvataggio colori', () => this.kb.saveCustomLighting(), true);
+    for (const c of colors) {
+      const check = await this.checked('Verifica colori salvati', () => this.kb.getCustomLighting(c.key));
+      if (check.key !== c.key || ['r', 'g', 'b'].some(k => (check[k] ?? check[k.toUpperCase()]) !== c[k])) throw new Error('Persistenza del colore non verificata.');
+    }
     const map = new Map((this.state.customLighting || []).map(c => [c.key, c]));
     colors.forEach(c => map.set(c.key, c));
     this.state.customLighting = [...map.values()];
@@ -587,24 +642,29 @@ export class AulaKeyboard {
   }
 
   async readAdvanced(key, mode) {
-    const layouts = { 1: [5, 6, 7, 9, 10, 11, 12, 13, 14, 15, 16], 3: [9, 10, 11, 12, 19], 4: [9, 19], 9: [32] }[mode];
+    const layouts = { 1: [5, 6, 7, 9, 10, 11, 12, 13, 14, 15, 16], 2: [5, 6, 7, 9, 10, 11], 3: [9, 10, 11, 12, 19], 4: [9, 19], 5: [9, 19], 9: [32] }[mode];
     if (!layouts) throw new Error('Questa funzione avanzata non è esportabile.');
     const values = await this.readRegisters(layouts.map(layout => ({ key, layout })));
     if (!Array.isArray(values) || values.length !== layouts.length || layouts.some(layout => !values.some(v => v.key === key && v.layout === layout && Number.isInteger(v.value)))) throw new Error('Funzione avanzata incompleta.');
     return { key, mode, values: values.map(({ layout, value }) => ({ layout, value })) };
   }
 
-  async writeAdvanced(key, type, { first, second, delay, travel }) {
+  async writeAdvanced(key, type, config) {
+    const { first, second, delay, travel } = config;
     if (!this.state?.physical.some(p => p.keyValue === key) || [1, KEYCODES.FN0, KEYCODES.FN1, KEYCODES.FN2, KEYCODES.FN3].includes(key)) throw new Error('Seleziona un tasto diverso da Fn.');
     const old = await this.readKeyPerf(key);
     if (old.advancedKeyMode === 8 || old.advancedKeyMode === 9) throw new Error('Rimuovi prima la coppia SOCD o Rappy Snappy.');
     range(first, 1, 65535, 'Prima funzione', true);
-    range(second, 1, 65535, 'Seconda funzione', true);
-    range(delay, 10, 2550, 'Soglia pressione lunga', true);
-    const mode = { dks: 1, mt: 3, tgl: 4, rs: 9 }[type];
+    range(second ?? 0, 0, 65535, 'Seconda funzione', true);
+    range(delay, type === 'end' ? 0 : 10, 2550, 'Soglia pressione lunga', true);
+    const mode = ADVANCED_MODES[type];
     if (!mode) throw new Error('Comportamento non valido.');
     const expected = [];
-    if (type === 'mt') {
+    if (['dks', 'mpt'].includes(type) && (config.masks || type === 'mpt')) {
+      const values = advancedRegisters(type, config);
+      await this.writeRegisters(key, values);
+      expected.push(...values.map(v => [v.layout, v.value]));
+    } else if (type === 'mt') {
       await this.checked('Mod-Tap', () => this.kb.setMT({ key, dks: [first, second, 0, 0], delay: delay / 10 }));
       expected.push([9, first], [10, second], [19, delay / 10]);
     } else if (type === 'tgl') {
@@ -615,7 +675,12 @@ export class AulaKeyboard {
       // TRPS uses four press/release edges, encoded as action bit masks.
       await this.checked('DKS', () => this.kb.setDks({ key, dks: [first, second, 0, 0], trps: [1, 2, 2, 1], dbs: [500, Math.round(travel * 1000)] }));
       expected.push([9, first], [10, second], [5, 500], [7, Math.round(travel * 1000)], [13, 1], [14, 2], [15, 2], [16, 1]);
-    } else {
+    } else if (type === 'end') {
+      range(delay, 0, 2550, 'Ritardo rilascio', true);
+      await this.checked('Azione al rilascio', () => this.kb.setEND({ key, dks: first, delay }, this.state.protocolVersion));
+      const check = await this.checked('Verifica rilascio', () => this.kb.getEND(key));
+      if (check.dks !== first || check.delay !== delay) throw new Error('Azione al rilascio non verificata.');
+    } else if (type === 'rs') {
       if (key === first || !this.state.physical.some(p => p.keyValue === first) || [1, KEYCODES.FN0, KEYCODES.FN1, KEYCODES.FN2, KEYCODES.FN3].includes(first)) throw new Error('Scegli un secondo tasto fisico diverso da Fn.');
       const partner = await this.readKeyPerf(first);
       if (partner.advancedKeyMode !== 0) throw new Error('Il secondo tasto ha già una funzione avanzata.');
@@ -625,7 +690,7 @@ export class AulaKeyboard {
       if (![pair.dks1, pair.dks2].includes(key) || ![pair.dks1, pair.dks2].includes(first)) throw new Error('Coppia Rappy Snappy non verificata.');
       const partnerCheck = await this.checked('Verifica secondo tasto', () => this.kb.getPerformanceMode(first));
       if (partnerCheck.advancedKeyMode !== mode) throw new Error('Secondo tasto Rappy Snappy non verificato.');
-    }
+    } else throw new Error('Comportamento non valido.');
     await this.checked('Modalità avanzata', () => this.kb.setPerformanceMode(key, old.touchMode, mode));
     const check = await this.checked('Verifica modalità', () => this.kb.getPerformanceMode(key));
     if (check.advancedKeyMode !== mode) throw new Error('Modalità avanzata non verificata.');
@@ -633,6 +698,37 @@ export class AulaKeyboard {
       const values = await this.readAdvanced(key, mode);
       if (expected.some(([layout, value]) => values.values.find(v => v.layout === layout)?.value !== value)) throw new Error('Funzione avanzata non verificata.');
     }
+  }
+
+  async writeRegisters(key, values) {
+    for (let i = 0; i < values.length; i += 12) {
+      const chunk = values.slice(i, i + 12).map(p => ({ key, ...p }));
+      await this.checked('Scrittura registri', () => this.kb.setKey(chunk));
+      const stored = await this.readRegisters(chunk);
+      if (chunk.some(p => stored.find(s => s.key === p.key && s.layout === p.layout)?.value !== p.value)) throw new Error('Registri non verificati.');
+    }
+  }
+
+  async writeMacro(key, events, { mode = 0, num = 1, delay = 0 } = {}) {
+    validateMacro(events);
+    range(mode, 0, 3, 'Modalità macro', true); range(num, 1, 100, 'Ripetizioni', true); range(delay, 0, 60000, 'Pausa ripetizioni', true);
+    if (!this.state?.physical.some(p => p.keyValue === key) || [1, KEYCODES.FN0, KEYCODES.FN1, KEYCODES.FN2, KEYCODES.FN3].includes(key)) throw new Error('Seleziona un tasto diverso da Fn.');
+    const old = await this.readKeyPerf(key);
+    if ([8, 9].includes(old.advancedKeyMode)) throw new Error('Rimuovi prima la funzione di coppia.');
+    // SDK 1.0.24 stages all events at address 256. Protect existing bindings from overwrite.
+    const bound = [];
+    for (const p of this.state.physical) {
+      const current = await this.checked('Modalità tasti', () => this.kb.getPerformanceMode(p.keyValue));
+      if (current.advancedKeyMode === 6 && p.keyValue !== key) bound.push(p.keyValue);
+    }
+    if (bound.length) throw new Error('Questo SDK usa un buffer macro condiviso. Rimuovi la macro già assegnata prima di registrarne un’altra.');
+    const params = { key, index: 1, len: events.length, mode, num, delay };
+    await this.checked('Scrittura macro', () => this.kb.setMacro(params, events, old.touchMode === 'rt' ? 'quick' : 'single'));
+    const stored = await this.checked('Verifica assegnazione macro', () => this.kb.getMacro(key));
+    if (stored.key !== key || stored.id !== params.index || stored.len !== events.length || stored.mode !== mode || stored.num !== num || stored.delay !== delay) throw new Error('Assegnazione macro non verificata.');
+    this.state.macros = [{ key, events: structuredClone(events), params, binding: stored }];
+    try { localStorage.setItem(`studio-macro-${this.state.config?.configID ?? 0}`, JSON.stringify(this.state.macros)); } catch { /* Export remains available. */ }
+    this.log('Assegnazione macro verificata. Sequenza originale conservata per l’esportazione.', 'ok');
   }
 
   async removeAdvanced(key) {
@@ -675,9 +771,14 @@ export class AulaKeyboard {
       onProgress?.(i + 1, this.state.performances.length);
     }
     // Unsupported advanced payloads cannot be restored faithfully by this backup.
-    if (this.state.performances.some(p => ![0, 1, 3, 4, 8, 9].includes(p.advancedKeyMode))) throw new Error('Backup interrotto: sono presenti funzioni avanzate non esportabili da questa versione.');
+    if (this.state.performances.some(p => ![0, 1, 2, 3, 4, 5, 6, 8, 9].includes(p.advancedKeyMode))) throw new Error('Backup interrotto: sono presenti funzioni avanzate non esportabili da questa versione.');
+    for (const p of this.state.performances.filter(p => p.advancedKeyMode === 6)) {
+      const cached = this.state.macros?.find(m => m.key === p.keyValue);
+      const binding = await this.checked('Verifica archivio macro', () => this.kb.getMacro(p.keyValue));
+      if (!cached || !['key', 'id', 'len', 'mode', 'num', 'delay'].every(field => binding[field] === cached.binding[field])) throw new Error('La macro è stata creata fuori da Studio: manca la sequenza originale da esportare.');
+    }
     this.state.advanced = [];
-    for (const p of this.state.performances) if ([1, 3, 4, 9].includes(p.advancedKeyMode)) this.state.advanced.push(await this.readAdvanced(p.keyValue, p.advancedKeyMode));
+    for (const p of this.state.performances) if ([1, 2, 3, 4, 5, 9].includes(p.advancedKeyMode)) this.state.advanced.push(await this.readAdvanced(p.keyValue, p.advancedKeyMode));
     this.state.socd = [];
     for (const pair of [[4, 7], [26, 22]]) {
       if (this.state.performances.find(p => p.keyValue === pair[0])?.advancedKeyMode === 8) {
@@ -696,7 +797,8 @@ export class AulaKeyboard {
       schema: 4, createdAt: new Date().toISOString(), product: this.device?.productName || 'WIN 60 HE MAX',
       device: { vendorId: VENDOR_ID, productId: PRODUCT_ID }, protocolVersion: s.protocolVersion,
       rateIndex: s.rateIndex, layers: s.layers, performances: s.performances,
-      socd: s.socd, lighting: s.lighting, customLighting: s.customLighting, advanced: s.advanced || [],
+      socd: s.socd, lighting: s.lighting, customLighting: s.customLighting, advanced: s.advanced || [], macros: s.macros || [],
+      globalPerformance: s.globalPerformance || null,
     });
   }
 
@@ -712,9 +814,10 @@ export class AulaKeyboard {
     for (const layer of b.layers) for (const p of layer || []) if (!keys.has(p.key)) throw new Error('Layout del backup incompatibile.');
     for (const p of b.performances) {
       if (!keys.has(p.keyValue)) throw new Error('Tasto del backup incompatibile.');
-      if (![0, 8, null, undefined].includes(p.advancedKeyMode) && !b.advanced?.some(a => a.key === p.keyValue && a.mode === p.advancedKeyMode)) throw new Error('Il backup contiene funzioni avanzate incomplete.');
+      if (![0, 8, null, undefined].includes(p.advancedKeyMode) && !b.advanced?.some(a => a.key === p.keyValue && a.mode === p.advancedKeyMode) && !(p.advancedKeyMode === 6 && b.macros?.some(m => m.key === p.keyValue))) throw new Error('Il backup contiene funzioni avanzate incomplete.');
     }
     for (const a of b.advanced || []) if (!keys.has(a.key) || !b.performances.some(p => p.keyValue === a.key && p.advancedKeyMode === a.mode)) throw new Error('Funzione avanzata incompatibile con il backup.');
+    for (const m of b.macros || []) if (!keys.has(m.key) || !b.performances.some(p => p.keyValue === m.key && p.advancedKeyMode === 6)) throw new Error('Macro incompatibile con il backup.');
     for (const c of b.customLighting || []) if (!keys.has(c.key)) throw new Error('Tasto RGB del backup incompatibile.');
     // Validate every entry before sending the first write, including Fn access.
     const fnKeys = this.state.physical.filter(p => [1, KEYCODES.FN0, KEYCODES.FN1, KEYCODES.FN2, KEYCODES.FN3].includes(p.keyValue));
@@ -756,8 +859,10 @@ export class AulaKeyboard {
       const check = await this.checked('Verifica modalità avanzata', () => this.kb.getPerformanceMode(advanced.key));
       if (check.advancedKeyMode !== advanced.mode) throw new Error('Modalità avanzata non ripristinata.');
     }
-    if (b.customLighting?.length) await this.writeCustomLighting(b.customLighting);
-    if (b.lighting) await this.writeLighting(b.lighting);
+    if (b.globalPerformance) await this.writeGlobalPerformance(b.globalPerformance);
+    if (b.macros?.length) await this.writeMacro(b.macros[0].key, b.macros[0].events, b.macros[0].params);
+    if (b.lighting) await this.applyLighting(b.lighting, b.customLighting || []);
+    else if (b.customLighting?.length) await this.writeCustomLighting(b.customLighting);
     if (b.rateIndex != null) await this.setRate(b.rateIndex);
     this.log('Backup ripristinato e verificato.', 'ok');
   }

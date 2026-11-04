@@ -61,20 +61,34 @@ function toast(message, kind = 'ok') {
 function setStatus(text, kind) {
   $('status').textContent = text;
   $('status').className = `status status--${kind}`;
+  if (kind === 'warn') $('entryStatus').textContent = text;
 }
 
 function setButtons() {
+  const becameConnected = ui.connected && $('workspace').hidden;
   for (const b of document.querySelectorAll('[data-needs-device]')) b.disabled = !ui.connected || ui.busy;
   if (ui.calibration) for (const b of document.querySelectorAll('[data-needs-device]')) b.disabled = true;
   $('btnRestore').disabled = !ui.connected || ui.busy || ui.calibration || !aula.backup;
   $('btnConnect').disabled = ui.busy || ui.calibration || !AulaKeyboard.isSupported();
+  $('btnConnect').textContent = ui.connected ? 'Riconnetti' : 'Connetti tastiera';
   $('btnMapApply').disabled ||= $('btnMapApply').dataset.locked === '1';
   $('btnMapDefault').disabled ||= $('btnMapApply').dataset.locked === '1';
   $('btnCalibrationEnd').disabled = !ui.connected || ui.busy || !ui.calibration;
   $('btnDisconnect').hidden = !ui.connected;
   $('btnDisconnect').disabled = ui.busy || ui.calibration;
   for (const b of $('profileSeg').children) b.disabled ||= !aula.state?.config?.hasFourConfig;
+  $('btnSystemApply').disabled ||= !aula.state?.system?.hasWinMode;
+  $('btnSuperResponse').disabled ||= !aula.state?.lighting;
+  $('perfMode').querySelector('[value="global"]').disabled = !aula.state?.globalPerformance;
   $('connectionHint').hidden = ui.connected;
+  $('connectionScreen').hidden = ui.connected;
+  $('workspace').hidden = !ui.connected;
+  $('workspace').inert = !ui.connected;
+  document.querySelector('.skip-link').href = ui.connected ? '#main' : '#btnEntryConnect';
+  if (becameConnected) $('main').focus({ preventScroll: true });
+  document.body.classList.toggle('is-disconnected', !ui.connected);
+  $('btnEntryConnect').disabled = ui.busy || !AulaKeyboard.isSupported();
+  $('btnEntryConnect').querySelector('span').textContent = ui.busy ? 'Connessione e lettura…' : 'Connetti la tua tastiera';
 }
 
 // Runs one device operation at a time; live polling is paused so responses don't interleave.
@@ -93,6 +107,7 @@ async function task(button, fn, okMessage) {
     const msg = error?.message || String(error);
     log(msg, 'error');
     toast(msg, 'err');
+    if (!ui.connected) { $('entryError').textContent = msg; $('entryError').hidden = false; }
   } finally {
     if (button) button.textContent = old;
     ui.busy = false;
@@ -315,12 +330,12 @@ function afterSelection() {
     const [k] = ui.perfSel;
     task(null, async () => {
       const p = await aula.readKeyPerf(k);
-      $('perfMode').value = p.touchMode === 'rt' ? 'rt' : 'single';
+      $('perfMode').value = p.touchMode;
       const set = (id, v) => {
         $(id).value = v;
         $(id).dispatchEvent(new Event('input'));
       };
-      set('perfAct', p.actuation);
+      set('perfAct', p.touchMode === 'global' ? aula.state.globalPerformance?.globalTouchTravel ?? p.actuation : p.actuation);
       set('perfRtp', p.rtPress);
       set('perfRtr', p.rtRelease);
       set('perfDp', p.pressDead);
@@ -624,12 +639,14 @@ async function refresh() {
 $('btnConnect').addEventListener('click', () =>
   task($('btnConnect'), async () => {
     setStatus('Connessione…', 'warn');
+    $('entryError').hidden = true;
     try {
       await aula.connect();
       setStatus(aula.initialInfo?.name || 'Connessa', 'ok');
       await refresh();
       ui.connected = true;
       ui.followPerf = null;
+      renderAll();
     } catch (error) {
       ui.connected = false;
       setStatus('Non connesso', 'idle');
@@ -640,9 +657,13 @@ $('btnConnect').addEventListener('click', () =>
   }, 'Tastiera connessa'),
 );
 
+$('btnEntryConnect').addEventListener('click', () => $('btnConnect').click());
+drawKeyboard($('entryKeyboard'), { label: key => ({ main: physicalLabel(key) }) });
+
 if (!AulaKeyboard.isSupported()) {
   $('notSupported').hidden = false;
   $('btnConnect').disabled = true;
+  $('entryStatus').textContent = 'Apri questa pagina in Chrome o Edge su desktop per collegare la tastiera via USB.';
 }
 
 initWorkspace({ aula, ui, task, toast, log, renderAll, drawKeyboard, physicalRows, mapOf, refresh, setButtons, setStatus, stopLive, openMapEditor });

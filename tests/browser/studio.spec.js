@@ -1,8 +1,11 @@
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+import { installKeyboard, connectKeyboard } from './keyboard-fixture.js';
 
 test.beforeEach(async ({ page }) => {
+  await installKeyboard(page);
   await page.goto('/');
+  await connectKeyboard(page);
   await expect(page.locator('#bootError')).toBeHidden();
   await expect(page.locator('#kbdOverview .key')).toHaveCount(61);
 });
@@ -18,6 +21,7 @@ test('all views navigate, deep links and browser back work', async ({ page }) =>
   await page.goBack();
   await expect(page.locator('section[data-view="settings"]')).toBeVisible();
   await page.reload();
+  await connectKeyboard(page);
   await expect(page.locator('section[data-view="settings"]')).toBeVisible();
   expect(errors).toEqual([]);
 });
@@ -38,7 +42,7 @@ test('mapping search, physical capture and Fn protection', async ({ page }) => {
   await expect(page.locator('#btnMapApply')).toBeDisabled();
 });
 
-test('RGB draft paints keys and cannot write without device', async ({ page }) => {
+test('RGB draft paints keys and writes through the actual browser SDK', async ({ page }) => {
   await page.locator('#nav [data-view="rgb"]').click();
   await expect(page.locator('#kbdRgb .key')).toHaveCount(61);
   await page.locator('[data-rgb-select="wasd"]').click();
@@ -48,7 +52,10 @@ test('RGB draft paints keys and cannot write without device', async ({ page }) =
   await expect(page.locator('#rgbMode')).toHaveValue('21');
   await expect(page.locator('#rgbSelection')).toHaveText('4 tasti selezionati');
   expect(await page.locator('#kbdRgb [data-key="4"]').evaluate(el => el.style.getPropertyValue('--rgb'))).toBe('rgb(255 0 170)');
-  await expect(page.locator('#btnRgbApply')).toBeDisabled();
+  await page.locator('#btnRgbApply').click();
+  await expect(page.locator('#toast')).toContainText('RGB salvati');
+  expect(await page.evaluate(() => window.__keyboardFixture.colors.get(4))).toEqual([255, 0, 170]);
+  expect(await page.evaluate(() => window.__keyboardFixture.ledBrightness)).toBe(4);
 });
 
 test('theme and language persist and can switch back', async ({ page }) => {
@@ -59,6 +66,7 @@ test('theme and language persist and can switch back', async ({ page }) => {
   await page.locator('#nav [data-view="rgb"]').click();
   await expect(page.locator('section[data-view="rgb"] h1')).toHaveText('RGB lighting');
   await page.reload();
+  await connectKeyboard(page);
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
   await expect(page.locator('html')).toHaveAttribute('lang', 'en');
   await page.locator('#languageSelect').selectOption('it');
@@ -83,7 +91,7 @@ for (const theme of ['light', 'dark']) test(`${theme} theme accessibility on eac
 
 for (const width of [375, 768, 1024, 1440]) test(`responsive at ${width}px`, async ({ page }) => {
   await page.setViewportSize({ width, height: 900 });
-  for (const view of ['overview', 'keymap', 'rgb', 'perf', 'settings']) {
+  for (const view of ['overview', 'keymap', 'rgb', 'perf', 'advanced', 'settings']) {
     await page.locator(`#nav [data-view="${view}"]`).click();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), view).toBe(true);
   }

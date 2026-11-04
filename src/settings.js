@@ -1,8 +1,9 @@
 export const MAX_TRAVEL = 3.4;
+export const LIGHT_EFFECTS = ['Onde', 'Respiro', 'Increspature', 'Vortice', 'Arcobaleno', 'Arcobaleno pulsante', 'Scintille', 'Griglia mobile', 'Onda cromatica', 'Trasformazione', 'Sinusoide', 'Flusso', 'Fioritura', 'Mosaico', 'Pioggia', 'Salto', 'Scia', 'Traccia reattiva', 'Laser', 'Ripple'];
 export const DEFAULT_LIGHT = {
-  open: true, type: 'static', mode: 0, luminance: 100, speed: 3,
+  open: true, type: 'static', mode: 0, luminance: 4, speed: 2,
   colors: ['#5eead4', '#60a5fa', '#a78bfa', '#fb7185', '#fbbf24', '#34d399', '#ffffff'],
-  staticColor: 1, dynamicColorId: 0, direction: false, superResponse: false, sleepDelay: 0,
+  staticColor: 0, dynamicColorId: 7, direction: false, superResponse: false, sleepDelay: 0,
 };
 
 export function range(value, min, max, name, integer = false) {
@@ -25,11 +26,11 @@ export function validatePerformance(p) {
 export function validateLight(light) {
   if (!light || !['static', 'dynamic', 'custom'].includes(light.type)) throw new Error('Illuminazione non valida.');
   range(light.mode, 0, 21, 'Effetto', true);
-  range(light.luminance, 0, 255, 'Luminosità', true);
-  range(light.speed, 0, 255, 'Velocità', true);
+  range(light.luminance, 0, 4, 'Luminosità', true);
+  range(light.speed, 0, 4, 'Velocità', true);
   range(light.sleepDelay, 0, 255, 'Standby', true);
   range(light.staticColor, 0, 7, 'Indice colore', true);
-  range(light.dynamicColorId ?? 0, 0, 255, 'Colore dinamico', true);
+  range(light.dynamicColorId ?? 0, 0, 7, 'Colore dinamico', true);
   if (!Array.isArray(light.colors) || light.colors.length !== 7 || light.colors.some(c => !/^#[0-9a-f]{6}$/i.test(c))) {
     throw new Error('La palette RGB deve contenere sette colori HEX validi.');
   }
@@ -94,16 +95,27 @@ export function validateBackup(data) {
       range(p.key, 1, 255, 'Tasto avanzato', true);
       if (seen.has(p.key)) throw new Error('Funzione avanzata duplicata.');
       seen.add(p.key);
-      if (![1, 3, 4, 9].includes(p.mode) || !Array.isArray(p.values) || p.values.length > 14) throw new Error('Payload avanzato non valido.');
+      if (![1, 2, 3, 4, 5, 9].includes(p.mode) || !Array.isArray(p.values) || p.values.length > 14) throw new Error('Payload avanzato non valido.');
       const layouts = new Set();
       for (const entry of p.values) {
         if (![5, 6, 7, 9, 10, 11, 12, 13, 14, 15, 16, 19, 32].includes(entry.layout) || layouts.has(entry.layout)) throw new Error('Registro avanzato non valido.');
         layouts.add(entry.layout);
         range(entry.value, 0, 65535, 'Valore avanzato', true);
       }
-      const expected = p.mode === 9 ? [32] : p.mode === 1 ? [5, 6, 7, 9, 10, 11, 12, 13, 14, 15, 16] : p.mode === 3 ? [9, 10, 11, 12, 19] : [9, 19];
+      const expected = p.mode === 9 ? [32] : p.mode === 1 ? [5, 6, 7, 9, 10, 11, 12, 13, 14, 15, 16] : p.mode === 2 ? [5, 6, 7, 9, 10, 11] : p.mode === 3 ? [9, 10, 11, 12, 19] : [9, 19];
       if (expected.some(layout => !layouts.has(layout))) throw new Error('Payload avanzato incompleto.');
     }
+  }
+  if (data.macros != null) {
+    if (!Array.isArray(data.macros) || data.macros.length > 1) throw new Error('Il buffer condiviso consente una sequenza macro per profilo.');
+    for (const macro of data.macros) {
+      range(macro.key, 1, 255, 'Tasto macro', true); validateMacro(macro.events);
+      range(macro.params?.mode, 0, 3, 'Modalità macro', true); range(macro.params?.num, 1, 100, 'Ripetizioni', true); range(macro.params?.delay, 0, 60000, 'Pausa macro', true);
+    }
+  }
+  if (data.globalPerformance != null) {
+    range(data.globalPerformance.globalTouchTravel, 0.1, 3.4, 'Attuazione globale');
+    range(data.globalPerformance.pressDead, 0, 1, 'Zona morta globale'); range(data.globalPerformance.releaseDead, 0, 1, 'Zona morta globale');
   }
   return data;
 }
@@ -127,4 +139,20 @@ export function stepTrigger(state, travel, perf = {}) {
   }
   if (travel <= top) state.started = false;
   return state;
+}
+
+export function validateMacro(events) {
+  if (!Array.isArray(events) || events.length < 2 || events.length > 64) throw new Error('La macro deve contenere da 2 a 64 eventi.');
+  const held = new Set();
+  for (const event of events) {
+    range(event.keyCode, 4, 231, 'Tasto macro', true);
+    range(event.timeDifference, 0, 60000, 'Pausa macro', true);
+    if (![0, 1].includes(event.status)) throw new Error('Stato macro non valido.');
+    if (event.status === 1) {
+      if (held.has(event.keyCode)) throw new Error('La macro preme due volte un tasto senza rilasciarlo.');
+      held.add(event.keyCode);
+    } else if (!held.delete(event.keyCode)) throw new Error('La macro rilascia un tasto che non è premuto.');
+  }
+  if (held.size) throw new Error('La macro deve rilasciare tutti i tasti premuti.');
+  return events;
 }

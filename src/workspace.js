@@ -1,6 +1,7 @@
 import { KEY_GROUPS, keyLabel, physicalLabel, CODE_TO_HID } from './keycodes.js';
-import { DEFAULT_LIGHT, rgbFromHex } from './settings.js';
+import { DEFAULT_LIGHT, LIGHT_EFFECTS, rgbFromHex } from './settings.js';
 import { initLanguage } from './i18n.js';
+import { initAdvancedEditor } from './advanced-ui.js';
 
 const $ = id => document.getElementById(id);
 const preferences = {
@@ -24,6 +25,7 @@ export function initWorkspace({ aula, ui, task, toast, log, renderAll, drawKeybo
 
   function navigate(view, updateHash = true) {
     if (ui.captureMapping) cancelCapture();
+    ui.stopMacroRecording?.();
     const button = [...$('nav').children].find(b => b.dataset.view === view) || $('nav').firstElementChild;
     view = button.dataset.view;
     for (const b of $('nav').children) {
@@ -46,6 +48,7 @@ export function initWorkspace({ aula, ui, task, toast, log, renderAll, drawKeybo
   navigate(location.hash.slice(1) || 'overview', false);
 
   aula.onDisconnect = () => {
+    ui.stopMacroRecording?.();
     ui.connected = false;
     ui.calibration = false;
     stopLive();
@@ -56,6 +59,7 @@ export function initWorkspace({ aula, ui, task, toast, log, renderAll, drawKeybo
     setButtons();
   };
   $('btnDisconnect').addEventListener('click', () => task($('btnDisconnect'), async () => {
+    ui.stopMacroRecording?.();
     await aula.disconnect();
     ui.connected = false;
     ui.followPerf = null;
@@ -63,6 +67,11 @@ export function initWorkspace({ aula, ui, task, toast, log, renderAll, drawKeybo
     renderAll();
   }));
   $('btnRefresh').addEventListener('click', () => task($('btnRefresh'), refresh, 'Stato aggiornato'));
+  $('btnSystemApply').addEventListener('click', () => task($('btnSystemApply'), async () => { await aula.switchSystem($('deviceSystem').value); renderDevice(); }, 'Modalità sistema verificata'));
+  $('btnSuperResponse').addEventListener('click', () => task($('btnSuperResponse'), async () => {
+    const light = await aula.readLighting();
+    await aula.writeLighting({ ...light, superResponse: $('deviceSuperResponse').checked }); renderAll();
+  }, 'Super Response verificata'));
   document.addEventListener('visibilitychange', () => { if (document.hidden) stopLive(); });
 
   // Mapping: searchable functions, category filters, physical key capture and draft feedback.
@@ -146,17 +155,16 @@ export function initWorkspace({ aula, ui, task, toast, log, renderAll, drawKeybo
   let dirty = false;
   for (let i = 1; i <= 20; i++) {
     const o = document.createElement('option');
-    o.value = i; o.textContent = `Effetto firmware ${i}`;
+    o.value = i; o.textContent = `${LIGHT_EFFECTS[i - 1]} · ${i}`;
     $('rgbMode').appendChild(o);
   }
   function renderRgb() {
+    const activeColor = light.type === 'dynamic' ? light.dynamicColorId : light.staticColor;
     $('rgbMode').value = light.mode;
     $('rgbBrightness').value = light.luminance;
-    $('rgbBrightnessOut').textContent = light.luminance;
-    // Preserve values read from firmware even if outside the usual 0–5 range.
-    $('rgbSpeed').max = Math.max(5, light.speed);
+    $('rgbBrightnessOut').textContent = `${light.luminance * 25}%`;
     $('rgbSpeed').value = light.speed;
-    $('rgbSpeedOut').textContent = light.speed;
+    $('rgbSpeedOut').textContent = `${light.speed + 1} / 5`;
     $('rgbDirection').checked = light.direction;
     $('rgbColor').value = light.colors[paletteIndex];
     $('rgbHex').value = light.colors[paletteIndex];
@@ -167,11 +175,16 @@ export function initWorkspace({ aula, ui, task, toast, log, renderAll, drawKeybo
       const b = document.createElement('button');
       b.className = 'swatch'; b.style.setProperty('--swatch', color);
       b.setAttribute('aria-label', `Colore ${index + 1}: ${color}`);
-      b.setAttribute('aria-pressed', paletteIndex === index);
-      b.classList.toggle('active', paletteIndex === index);
-      b.addEventListener('click', () => { paletteIndex = index; light.staticColor = index + 1; dirty = true; renderRgb(); });
+      b.setAttribute('aria-pressed', activeColor === index);
+      b.classList.toggle('active', activeColor === index);
+      b.addEventListener('click', () => { paletteIndex = index; light.staticColor = index; light.dynamicColorId = index; light.open = true; if (!light.luminance) light.luminance = 4; dirty = true; renderRgb(); });
       $('rgbPalette').appendChild(b);
     });
+    const rainbow = document.createElement('button'); rainbow.className = 'swatch swatch-rainbow';
+    rainbow.setAttribute('aria-label', 'Arcobaleno'); rainbow.setAttribute('aria-pressed', activeColor === 7);
+    rainbow.classList.toggle('active', activeColor === 7);
+    rainbow.addEventListener('click', () => { light.staticColor = 7; light.dynamicColorId = 7; light.open = true; if (!light.luminance) light.luminance = 4; dirty = true; renderRgb(); });
+    $('rgbPalette').appendChild(rainbow);
     drawKeyboard($('kbdRgb'), {
       label: k => ({ main: physicalLabel(k) }), classes: k => selected.has(k) ? 'is-selected' : '',
       onClick: k => { selected.has(k) ? selected.delete(k) : selected.add(k); renderRgb(); },
@@ -179,9 +192,9 @@ export function initWorkspace({ aula, ui, task, toast, log, renderAll, drawKeybo
     for (const key of $('kbdRgb').querySelectorAll('.key')) {
       const rgb = custom.get(Number(key.dataset.key));
       const color = light.type === 'custom' ? (rgb ? `rgb(${rgb.r} ${rgb.g} ${rgb.b})` : '#111820') :
-        light.type === 'static' ? light.colors[Math.max(0, light.staticColor - 1)] : light.colors[(Number(key.dataset.col) + Number(key.dataset.row)) % 7];
+        activeColor < 7 ? light.colors[activeColor] : light.colors[(Number(key.dataset.col) + Number(key.dataset.row)) % 7];
       key.style.setProperty('--rgb', color);
-      key.style.setProperty('--rgb-opacity', light.open ? Math.max(0.12, light.luminance / 255) : 0);
+      key.style.setProperty('--rgb-opacity', light.open ? light.luminance / 4 : 0);
       key.classList.add('rgb-key');
     }
   }
@@ -189,6 +202,7 @@ export function initWorkspace({ aula, ui, task, toast, log, renderAll, drawKeybo
     light.mode = Number($('rgbMode').value);
     light.type = light.mode === 21 ? 'custom' : light.mode === 0 ? 'static' : 'dynamic';
     light.luminance = Number($('rgbBrightness').value);
+    if (id !== 'rgbBrightness' && light.luminance === 0) light.luminance = 4;
     light.speed = Number($('rgbSpeed').value);
     light.direction = $('rgbDirection').checked;
     light.open = true; dirty = true; renderRgb();
@@ -197,7 +211,9 @@ export function initWorkspace({ aula, ui, task, toast, log, renderAll, drawKeybo
     if (!/^#[0-9a-f]{6}$/i.test(color)) { $('rgbHex').setCustomValidity('Usa un colore HEX, es. #5eead4'); return; }
     $('rgbHex').setCustomValidity('');
     light.colors[paletteIndex] = color;
-    light.staticColor = paletteIndex + 1;
+    light.staticColor = paletteIndex;
+    light.dynamicColorId = paletteIndex;
+    if (light.luminance === 0) light.luminance = 4;
     light.open = true; dirty = true; renderRgb();
   }
   $('rgbColor').addEventListener('input', e => updateColor(e.target.value));
@@ -218,8 +234,7 @@ export function initWorkspace({ aula, ui, task, toast, log, renderAll, drawKeybo
   });
   $('btnRgbApply').addEventListener('click', () => task($('btnRgbApply'), async () => {
     if (!$('rgbHex').reportValidity()) throw new Error('Colore HEX non valido.');
-    if (light.type === 'custom' && custom.size) await aula.writeCustomLighting([...custom.values()]);
-    light = structuredClone(await aula.writeLighting(light));
+    light = structuredClone(await aula.applyLighting(light, light.type === 'custom' ? [...custom.values()] : []));
     lightSource = aula.state.lighting; dirty = false; renderRgb();
   }, 'RGB salvati e verificati'));
   $('btnRgbOff').addEventListener('click', () => task($('btnRgbOff'), async () => {
@@ -230,7 +245,7 @@ export function initWorkspace({ aula, ui, task, toast, log, renderAll, drawKeybo
   $('btnRgbRead').addEventListener('click', () => task($('btnRgbRead'), async () => {
     light = structuredClone(await aula.readLighting());
     custom = new Map((await aula.readCustomLighting()).map(c => [c.key, c]));
-    paletteIndex = Math.max(0, light.staticColor - 1);
+    paletteIndex = Math.min(6, light.type === 'dynamic' ? light.dynamicColorId : light.staticColor);
     lightSource = aula.state.lighting; dirty = false; renderRgb();
   }, 'RGB riletti'));
 
@@ -261,8 +276,7 @@ export function initWorkspace({ aula, ui, task, toast, log, renderAll, drawKeybo
   }, 'Calibrazione terminata'));
 
   let advancedKey = null;
-  for (const id of ['advancedFirst', 'advancedSecond']) $(id).innerHTML = $('mapTarget').innerHTML;
-  $('advancedFirst').value = '4'; $('advancedSecond').value = '224';
+  const advancedEditor = initAdvancedEditor({ ui, toast });
   function renderAdvanced() {
     drawKeyboard($('kbdAdvanced'), {
       label: k => ({ main: physicalLabel(k), sub: aula.state?.performances.find(p => p.keyValue === k)?.advancedKeyMode ? 'ADV' : '' }),
@@ -270,18 +284,6 @@ export function initWorkspace({ aula, ui, task, toast, log, renderAll, drawKeybo
       onClick: k => { advancedKey = k; $('advancedTitle').textContent = `Tasto ${physicalLabel(k)}`; renderAdvanced(); },
     });
   }
-  $('advancedMode').addEventListener('change', () => {
-    const mode = $('advancedMode').value;
-    $('advancedDelayLabel').hidden = !['mt', 'tgl'].includes(mode);
-    $('advancedSecondLabel').hidden = ['tgl', 'rs'].includes(mode);
-    $('advancedTravelLabel').hidden = mode !== 'dks';
-    $('advancedHint').textContent = {
-      mt: 'Un tocco invia la prima funzione; una pressione lunga attiva la seconda.',
-      tgl: 'Un tocco mantiene attiva la funzione; il tocco successivo la rilascia.',
-      dks: 'La prima funzione scatta a 0,5 mm, la seconda al punto scelto. Il rilascio le disattiva.',
-      rs: 'La prima funzione indica il secondo tasto fisico della coppia. Prevale il tasto con maggiore corsa.',
-    }[mode];
-  });
   document.addEventListener('click', e => {
     if (e.target.closest('.seg')) queueMicrotask(() => {
       document.querySelectorAll('.seg button').forEach(b => b.setAttribute('aria-pressed', b.classList.contains('active')));
@@ -289,13 +291,16 @@ export function initWorkspace({ aula, ui, task, toast, log, renderAll, drawKeybo
   });
   $('btnAdvancedApply').addEventListener('click', () => task($('btnAdvancedApply'), async () => {
     if (advancedKey == null) throw new Error('Seleziona un tasto.');
-    if (!$('advancedDelay').reportValidity() || !$('advancedTravel').reportValidity()) throw new Error('Controlla i valori.');
-    await aula.writeAdvanced(advancedKey, $('advancedMode').value, {
-      first: Number($('advancedFirst').value), second: Number($('advancedSecond').value),
-      delay: Number($('advancedDelay').value), travel: Number($('advancedTravel').value),
-    });
+    const mode = $('advancedMode').value;
+    for (const input of document.querySelectorAll('.advanced-editor input[type="number"]')) {
+      if (!input.closest('[hidden]') && !input.reportValidity()) throw new Error('Controlla i valori.');
+    }
+    if (mode === 'macro') {
+      const macro = advancedEditor.macro();
+      await aula.writeMacro(advancedKey, macro.events, macro.options);
+    } else await aula.writeAdvanced(advancedKey, mode, advancedEditor.config());
     await refresh();
-  }, 'Comportamento scritto e verificato'));
+  }, 'Configurazione assegnata e riletta'));
   $('btnAdvancedRemove').addEventListener('click', () => task($('btnAdvancedRemove'), async () => {
     if (advancedKey == null) throw new Error('Seleziona un tasto.');
     await aula.removeAdvanced(advancedKey);
@@ -307,6 +312,8 @@ export function initWorkspace({ aula, ui, task, toast, log, renderAll, drawKeybo
     $('deviceFirmware').textContent = s?.info?.appVersion && s.info.appVersion !== 'KB2' ? s.info.appVersion : 'Non disponibile';
     $('deviceProtocol').textContent = s?.protocolVersion ?? '—';
     $('deviceKeys').textContent = s?.physical.length ?? '—';
+    $('deviceSuperResponse').checked = Boolean(s?.lighting?.superResponse);
+    if (s?.system?.currentSystem) $('deviceSystem').value = s.system.currentSystem;
     for (const b of $('profileSeg').children) b.classList.toggle('active', Number(b.dataset.profile) === s?.config?.configID);
     $('profileReadout').textContent = s?.config?.hasFourConfig ? `Profilo attuale: ${s.config.configID + 1}` : 'La disponibilità viene verificata alla connessione.';
     $('socdFirst').textContent = keyLabel(ui.socdPair[0]);
@@ -317,7 +324,7 @@ export function initWorkspace({ aula, ui, task, toast, log, renderAll, drawKeybo
     if (aula.state?.lighting && aula.state.lighting !== lightSource) {
       light = structuredClone(aula.state.lighting); lightSource = aula.state.lighting;
       custom = new Map((aula.state.customLighting || []).map(c => [c.key, c]));
-      paletteIndex = Math.max(0, light.staticColor - 1); dirty = false;
+      paletteIndex = Math.min(6, light.type === 'dynamic' ? light.dynamicColorId : light.staticColor); dirty = false;
     }
     renderRgb(); renderAdvanced(); renderDevice();
   });

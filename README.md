@@ -12,7 +12,7 @@
 
 <p align="center">
   <a href="https://primebuild-pc.github.io/aula-win60he-tool/"><img alt="Open the web driver" src="https://img.shields.io/badge/Open%20the%20web%20driver-5eead4?style=for-the-badge&labelColor=0a0c10" /></a>
-  <img alt="Status: beta 0.2.0" src="https://img.shields.io/badge/status-beta%200.2.0-fbbf24?style=for-the-badge&labelColor=0a0c10" />
+  <img alt="Status: beta 0.3.0" src="https://img.shields.io/badge/status-beta%200.3.0-fbbf24?style=for-the-badge&labelColor=0a0c10" />
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-60a5fa?style=for-the-badge&labelColor=0a0c10" /></a>
   <img alt="WebHID" src="https://img.shields.io/badge/WebHID-Chrome%20%7C%20Edge-e9eef5?style=for-the-badge&labelColor=0a0c10" />
 </p>
@@ -30,18 +30,18 @@ software. If your AULA WIN 60 HE MAX has keys that send arrows instead of letter
 
 ## Features
 
-### New in 0.2.0
+### New in 0.3.0
 
-- **RGB lighting:** static color, 20 firmware effect IDs, brightness, speed, direction, seven-color palette, per-key painting and lights off. A local color preview works before connecting. Effect names and animations depend on the firmware; the preview does not simulate them.
-- **Easier mapping:** searchable function tiles, category filters, physical key capture, a before/after preview and protection for the Fn key.
-- **Light, dark and system themes**, plus Italian/English interface preferences saved in your browser. Diagnostic logs retain their original text.
-- **SOCD on A/D and W/S**, independently, with actual configuration included in backups.
-- **Four onboard profiles**, shown only when reported by the keyboard, and a guided sensor calibration flow.
-- **Advanced keys (beta):** Mod-Tap, Toggle, DKS and Rappy Snappy, with readback and removal controls.
-- **Backup v4:** fresh readings of every key, layers, performance, SOCD, RGB and supported advanced payloads. Legacy v3 files remain importable; unknown advanced modes are rejected rather than silently dropped.
-- Faster initial diagnosis, disconnect handling, pausing sensor polling in hidden tabs, responsive navigation and accessible keyboard controls.
+- **Connect-first welcome screen:** a single Connect action, a floating keyboard illustration and a clear USB/browser explanation. Configuration becomes available only after the keyboard has been read. Disconnecting returns to the welcome screen.
+- **RGB fixed for the actual firmware:** brightness and speed use levels 0–4, palette slots are zero-based, slot 7 is rainbow, and custom mode is activated before per-key colors are sent. Color writes are read back after persistence. Choosing a color from zero brightness restores visible brightness.
+- **Advanced key catalog:** Mod-Tap, Toggle, four-action DKS with editable activation phases, three-depth MPT, END (release action), Rappy Snappy and macro recording/import/export/binding.
+- **Device controls:** global actuation, Super Response, Windows/macOS mode, onboard profiles and guided calibration.
+- **Real browser/SDK tests:** connection, settings, backup and disconnection run through a WebHID boundary emulator rather than bypassing the production SDK. The RGB browser flow has also been exercised against the connected WIN60 HE MAX over a local USB transport, with the original RGB configuration restored afterward.
+- Light/dark/system themes, Italian/English, searchable mapping and validated backup v4 remain available.
 
-The new hardware controls have automated packet and simulated-transport tests. **Physical validation of RGB, advanced behaviors, profile switching and calibration is still pending.** Firmware flashing and onboard macro editing are not included; see [the handoff](docs/RELEASE-0.2.0.md) for the concrete blockers.
+**Macro limitation:** SDK 1.0.24 uses a shared staging buffer. Studio permits one assigned sequence per profile and blocks an assignment that could overwrite another binding. Sequences recorded/imported in Studio are retained locally and included in backups; externally created macros require their original sequence file. Binding readback verifies metadata, not physical macro playback.
+
+Firmware flashing remains unavailable. See [release notes and handoff](docs/RELEASE-0.3.0.md) for verification evidence and remaining hardware checks.
 
 <table>
   <tr>
@@ -90,7 +90,7 @@ The new hardware controls have automated packet and simulated-transport tests. *
 Settings are stored in the keyboard's own memory: they stay when you unplug it or move it to another computer.
 
 > [!NOTE]
-> Choose Italian or English and light, dark or system theme in the top bar. Explore mapping and RGB previews before connecting.
+> Connect the keyboard from the welcome screen first. Then choose Italian or English and light, dark or system theme in the workspace top bar.
 
 ### Default FPS profile
 
@@ -166,6 +166,8 @@ src/main.js       user interface
 src/workspace.js  RGB, mapping tools, profiles and calibration
 src/settings.js   settings and backup validation, trigger display model
 src/i18n.js       Italian / English interface
+src/advanced.js   advanced action and macro validation
+src/advanced-ui.js DKS phases, MPT and macro editor
 src/style.css     styles (dark and light theme)
 ```
 

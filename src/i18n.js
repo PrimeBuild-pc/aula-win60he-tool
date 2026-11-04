@@ -97,6 +97,43 @@ const translations = {
   'Anteprima corsa': 'Travel preview', 'Schema della corsa del tasto': 'Key travel diagram',
   'In ascolto… Esc per annullare': 'Listening… Esc to cancel', 'Nessuna funzione trovata. Prova un altro nome.': 'No matching functions. Try another name.',
   'WebHID non è disponibile in questo browser. Usa Chrome o Edge su desktop.': 'WebHID is unavailable in this browser. Use desktop Chrome or Edge.',
+  'IL TUO SETUP INIZIA QUI': 'YOUR SETUP STARTS HERE', 'Piccola tastiera.': 'Small keyboard.', 'Infinite possibilità.': 'Endless possibilities.',
+  'La precisione dei tuoi switch. Il carattere dei tuoi colori.': 'The precision of your switches. The character of your colors.',
+  'Collega la tastiera e rendila tua, un tasto alla volta.': 'Connect your keyboard. Make it yours, one key at a time.',
+  '61 TASTI · SENSORI MAGNETICI · IL TUO CONTROLLO': '61 KEYS · MAGNETIC SENSORS · YOUR CONTROL',
+  'Connetti la tua tastiera': 'Connect your keyboard', 'Connessione e lettura…': 'Connecting and reading…', 'Riconnetti': 'Reconnect',
+  'Collega il cavo USB e seleziona WIN 60 HE MAX nella finestra del browser.': 'Plug in the USB cable and select WIN 60 HE MAX in the browser dialog.',
+  'Chrome o Edge su desktop · Nessuna installazione · Impostazioni salvate nella tastiera': 'Desktop Chrome or Edge · No installation · Settings saved to your keyboard',
+  'PRECISIONE CHE SI SENTE.': 'PRECISION YOU CAN FEEL.', 'OPEN SOURCE. FATTO PER IL TUO SETUP.': 'OPEN SOURCE. BUILT FOR YOUR SETUP.',
+  'Apri questa pagina in Chrome o Edge su desktop per collegare la tastiera via USB.': 'Open this page in desktop Chrome or Edge to connect your keyboard over USB.',
+  'Scegli uno dei sette colori, poi modificalo con il selettore.': 'Choose one of seven colors, then adjust it with the picker.',
+  'Attuazione globale · condivisa': 'Global actuation · shared', 'Risposta e sistema': 'Response and system', 'Sistema operativo': 'Operating system',
+  'Salva sistema': 'Save system mode', 'Salva Super Response': 'Save Super Response',
+  'Super Response privilegia la velocità di risposta e può modificare la precisione del sensore. La modalità sistema cambia il comportamento dei modificatori Windows/macOS.': 'Super Response prioritizes speed and may change sensor precision. System mode changes Windows/macOS modifier behavior.',
+  'Un tocco, una funzione. Tieni premuto per la seconda.': 'Tap for one action. Hold for the other.', 'Attiva un tasto senza tenerlo premuto.': 'Keep a key active without holding it.',
+  'Quattro azioni, dalla pressione al rilascio.': 'Four actions, from press to release.', 'Tre azioni a tre profondità differenti.': 'Three actions at three different depths.',
+  'Una funzione aggiuntiva quando rilasci il tasto.': 'An extra action when you release the key.', 'Tra due tasti, vince quello premuto più a fondo.': 'Between two keys, the deeper one wins.',
+  'Una sequenza di azioni, in un solo tasto.': 'A sequence of actions on a single key.', 'Terza funzione': 'Third function', 'Quarta funzione': 'Fourth function',
+  'Prima soglia (mm)': 'First threshold (mm)', 'Seconda soglia (mm)': 'Second threshold (mm)', 'Terza soglia (mm)': 'Third threshold (mm)', 'Soglia / ritardo (ms)': 'Threshold / delay (ms)',
+  'Toggle · attiva / rilascia': 'Toggle · activate / release', 'DKS · quattro azioni lungo la corsa': 'DKS · four actions through the travel', 'MPT · tre punti di attuazione': 'MPT · three actuation points',
+  'END · azione al rilascio': 'END · action on release', 'Rappy Snappy · maggiore profondità': 'Rappy Snappy · deepest press', 'Macro · sequenza di tasti': 'Macro · key sequence',
+  'Fasi di attivazione': 'Activation phases', 'Ogni riga è una funzione. Seleziona le fasi di pressione e rilascio in cui deve essere attiva.': 'Each row is an action. Select the press and release phases in which it should be active.',
+  'Fondo': 'Bottom', 'Registra una sequenza oppure aggiungi i tasti manualmente. I dati restano nel browser finché non premi Applica.': 'Record a sequence or add keys manually. Data stays in your browser until you press Apply.',
+  'Registra sequenza': 'Record sequence', 'Ferma registrazione': 'Stop recording', 'Svuota': 'Clear', 'Esporta sequenza': 'Export sequence', 'Importa sequenza': 'Import sequence',
+  'Premi Registra sequenza per iniziare. Esc o Tab interrompono la registrazione.': 'Press Record sequence to start. Esc or Tab stops recording.',
+  'Registrazione attiva: premi i tasti. Esc o Tab per terminare.': 'Recording: press your keys. Esc or Tab to finish.',
+  'Registrazione fermata. Controlla la sequenza prima di assegnarla.': 'Recording stopped. Review the sequence before assigning it.',
+  'Tasto da aggiungere': 'Key to add', 'Pausa prima del tasto (ms)': 'Delay before key (ms)', 'Aggiungi pressione e rilascio': 'Add press and release',
+  'Azione': 'Action', 'Pausa (ms)': 'Delay (ms)', 'Pressione': 'Press', 'Rilascio': 'Release', 'Riproduzione': 'Playback',
+  'Una volta / numero di ripetizioni': 'Once / repeat count', 'Tocca per ripetere, ritocca per fermare': 'Tap to repeat, tap again to stop',
+  'Ripeti mentre il tasto è premuto': 'Repeat while held', 'Ripeti finché premuto, completa l’ultimo ciclo': 'Repeat while held, finish the last cycle',
+  'Ripetizioni': 'Repeat count', 'Pausa tra ripetizioni (ms)': 'Delay between repeats (ms)',
+  'Questo SDK usa un buffer macro condiviso: Studio protegge le sequenze esistenti e consente una macro assegnata per profilo. Le macro provenienti da altri driver richiedono il loro file originale per il backup.': 'This SDK uses a shared macro buffer: Studio protects existing sequences and supports one assigned macro per profile. Macros from other drivers need their original file for backup.',
+  'Configura fino a quattro funzioni e le rispettive fasi di attivazione tra le due soglie.': 'Configure up to four actions and their activation phases between the two thresholds.',
+  'Tre funzioni, tre profondità crescenti: ad esempio camminare, correre e scattare.': 'Three actions at increasing depths: for example, walk, run and sprint.',
+  'Invia la funzione selezionata quando rilasci il tasto, con il ritardo scelto.': 'Send the selected action when you release the key, with your chosen delay.',
+  'Registra, controlla e assegna la sequenza. L’assegnazione viene riletta dalla tastiera; i dati originali restano esportabili.': 'Record, review and assign your sequence. The binding is read back from the keyboard; your original data remains exportable.',
+  'Registra e assegna le macro da Tasti avanzati. Il buffer condiviso dell’SDK consente una sequenza assegnata per profilo; esporta il file originale per conservarla.': 'Record and assign macros from Advanced keys. The SDK shared buffer supports one assigned sequence per profile; export the original file to keep it.',
 };
 
 function translate(text) {
@@ -108,6 +145,7 @@ function translate(text) {
       .replace(/^Profilo attuale: (\d+)$/, 'Current profile: $1').replace(/^Coppie attive: /, 'Active pairs: ')
       .replace(/^Funzione attuale: /, 'Current function: ').replace(/^Tasto /, 'Key ').replace(/layer base/g, 'base layer').replace(/layer Fn/g, 'Fn layer')
       .replace(/^Lettura (\d+)\/(\d+)$/, 'Reading $1/$2');
+    value = value.replace(/^(\d+) eventi · /, '$1 events · ').replace(/^Colore (\d+): /, 'Color $1: ');
   }
   return text.replace(text.trim(), value);
 }
