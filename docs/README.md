@@ -17,6 +17,8 @@ WIN60 HE Studio is an independent WebHID configurator for the **AULA WIN 60 HE M
 
 ## Release history
 
+- [0.5.3 — persistent verified-preset feedback](RELEASE-0.5.3.md)
+
 - [0.5.2 — preset USB restart and reconnect fixes](RELEASE-0.5.2.md)
 
 - [0.5.1 — explicit keyboard-memory save and power-loss checks](RELEASE-0.5.1.md)

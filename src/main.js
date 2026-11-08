@@ -98,6 +98,7 @@ function setButtons() {
   document.body.classList.toggle('is-disconnected', !ui.connected);
   $('btnEntryConnect').disabled = ui.busy || !AulaKeyboard.isSupported();
   $('btnEntryConnect').querySelector('span').textContent = ui.busy ? 'Connessione e lettura…' : 'Connetti la tua tastiera';
+  ui.syncPresetState?.();
 }
 
 // Runs one device operation at a time; live polling is paused so responses don't interleave.
@@ -114,6 +115,7 @@ async function task(button, fn, okMessage, { persist = false } = {}) {
     if (persist) await aula.saveSettings();
     if (okMessage) toast(okMessage);
   } catch (error) {
+    ui.syncPresetState?.({ invalidate: true });
     const msg = error?.message || String(error);
     log(msg, 'error');
     toast(msg, 'err');

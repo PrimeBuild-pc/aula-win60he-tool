@@ -452,5 +452,9 @@
   "Save the settings already applied to the keyboard to its memory.": "Guarda en memoria los ajustes ya aplicados al teclado.",
   "The keyboard is not responding. Reconnect and retry; some changes may already be applied.": "El teclado no responde. Reconecta e inténtalo de nuevo; algunos cambios pueden haberse aplicado.",
   "Preset verification failed after reconnecting.": "No se pudo verificar el preajuste tras reconectar.",
-  "Reconnection failed. Replug the keyboard and press Connect.": "Error al reconectar. Vuelve a enchufar el teclado y pulsa Conectar."
+  "Reconnection failed. Replug the keyboard and press Connect.": "Error al reconectar. Vuelve a enchufar el teclado y pulsa Conectar.",
+  "Preset applied": "Preajuste aplicado",
+  "Changes to apply": "Cambios por aplicar",
+  "Writing and verifying: {done} / {total}": "Escribiendo y verificando: {done} / {total}",
+  "Saved to keyboard memory. The button becomes available again if you change the preset, polling rate or affected key settings.": "Guardado en la memoria del teclado. El botón vuelve a estar disponible si cambias el preajuste, la frecuencia de sondeo o los ajustes de las teclas afectadas."
 }

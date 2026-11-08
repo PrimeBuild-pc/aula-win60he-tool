@@ -452,5 +452,9 @@
   "Save the settings already applied to the keyboard to its memory.": "Сохранить в память настройки, уже применённые к клавиатуре.",
   "The keyboard is not responding. Reconnect and retry; some changes may already be applied.": "Клавиатура не отвечает. Подключитесь снова и повторите попытку; часть изменений уже могла примениться.",
   "Preset verification failed after reconnecting.": "Не удалось проверить пресет после повторного подключения.",
-  "Reconnection failed. Replug the keyboard and press Connect.": "Повторное подключение не удалось. Переподключите клавиатуру и нажмите «Подключить»."
+  "Reconnection failed. Replug the keyboard and press Connect.": "Повторное подключение не удалось. Переподключите клавиатуру и нажмите «Подключить».",
+  "Preset applied": "Пресет применён",
+  "Changes to apply": "Есть изменения для применения",
+  "Writing and verifying: {done} / {total}": "Запись и проверка: {done} / {total}",
+  "Saved to keyboard memory. The button becomes available again if you change the preset, polling rate or affected key settings.": "Сохранено в памяти клавиатуры. Кнопка снова станет доступна, если изменить пресет, частоту опроса или настройки затронутых клавиш."
 }

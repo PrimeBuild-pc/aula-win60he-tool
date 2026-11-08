@@ -452,5 +452,9 @@
   "Save the settings already applied to the keyboard to its memory.": "キーボードに適用済みの設定をメモリに保存します。",
   "The keyboard is not responding. Reconnect and retry; some changes may already be applied.": "キーボードが応答していません。再接続して再試行してください。一部の変更は適用済みの可能性があります。",
   "Preset verification failed after reconnecting.": "再接続後にプリセットを確認できませんでした。",
-  "Reconnection failed. Replug the keyboard and press Connect.": "再接続に失敗しました。キーボードを接続し直して「接続」を押してください。"
+  "Reconnection failed. Replug the keyboard and press Connect.": "再接続に失敗しました。キーボードを接続し直して「接続」を押してください。",
+  "Preset applied": "プリセット適用済み",
+  "Changes to apply": "適用待ちの変更",
+  "Writing and verifying: {done} / {total}": "書き込みと確認中: {done} / {total}",
+  "Saved to keyboard memory. The button becomes available again if you change the preset, polling rate or affected key settings.": "キーボードのメモリに保存されました。プリセット、ポーリングレート、対象キーの設定を変更すると、再び適用できます。"
 }

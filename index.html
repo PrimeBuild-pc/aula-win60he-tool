@@ -98,7 +98,7 @@
           <div id="status" class="status status--idle" role="status">Non connesso</div>
           <button id="btnConnect" class="primary block">Connetti tastiera</button>
           <button id="btnDisconnect" hidden>Disconnetti</button>
-          <a class="source-link" href="https://github.com/PrimeBuild-pc/aula-win60he-tool" target="_blank" rel="noopener">Open source · v0.5.2 ↗</a>
+          <a class="source-link" href="https://github.com/PrimeBuild-pc/aula-win60he-tool" target="_blank" rel="noopener">Open source · v0.5.3 ↗</a>
         </div>
       </aside>
 
@@ -238,7 +238,14 @@
             <div class="preset-table-wrap"><table class="preset-table"><thead><tr><th scope="col">Tasti</th><th scope="col">Attuazione</th><th scope="col">RT pressione / rilascio</th></tr></thead><tbody id="presetRows"></tbody></table></div>
             <p id="presetSocd" class="hint"></p>
             <p class="hint">Zone morte alta/bassa: 0,15 mm. Gli altri tasti, la mappatura e gli RGB restano invariati. Rimuovi prima eventuali macro o azioni avanzate sui tasti elencati.</p>
-            <div class="row"><button id="btnGamePresetApply" class="primary" data-needs-device>Applica preset</button><span id="presetStatus" class="hint" role="status"></span></div>
+            <div class="row">
+              <button id="btnGamePresetApply" class="primary" data-needs-device>Applica preset</button>
+              <div id="presetFeedback" class="preset-feedback" role="status">
+                <span id="presetAppliedIcon" hidden aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 12 4 4L19 6"/></svg></span>
+                <span id="presetStatus"></span>
+              </div>
+            </div>
+            <p id="presetAppliedHint" class="hint" hidden>Salvato nella memoria della tastiera. Il pulsante si riattiva se cambi preset, polling o le impostazioni dei tasti interessati.</p>
           </article>
           <article class="card">
             <div class="toolbar">

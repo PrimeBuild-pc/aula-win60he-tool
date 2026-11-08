@@ -63,18 +63,105 @@ test('explicit SOCD preset is removed by racing and advanced conflicts stop befo
   await page.locator('#gamePreset').selectOption('socd');
   await expect(page.locator('#presetDescription')).toContainText('Valve');
   await page.locator('#btnGamePresetApply').click();
-  await expect(page.locator('#btnGamePresetApply')).toBeEnabled();
+  await expect(page.locator('#btnGamePresetApply')).toHaveText('Preset applicato');
+  await expect(page.locator('#btnGamePresetApply')).toBeDisabled();
   expect((await read(page, '4:8')) & 15).toBe(8);
   await page.locator('#gamePreset').selectOption('racing');
   await page.locator('#btnGamePresetApply').click();
-  await expect(page.locator('#btnGamePresetApply')).toBeEnabled();
+  await expect(page.locator('#btnGamePresetApply')).toHaveText('Preset applicato');
+  await expect(page.locator('#btnGamePresetApply')).toBeDisabled();
   expect(await read(page, '4:8')).toBe(16);
   await page.evaluate(() => window.__keyboardFixture.registers.set('7:8', 33));
   const before = await page.evaluate(() => [...window.__keyboardFixture.registers]);
   await page.locator('#gamePreset').selectOption('fps-fast');
   await page.locator('#btnGamePresetApply').click();
   await expect(page.locator('#toast')).toContainText('Rimuovi prima le azioni avanzate');
+  await expect(page.locator('#btnGamePresetApply')).toBeEnabled();
+  await expect(page.locator('#presetAppliedHint')).toBeHidden();
   expect(await page.evaluate(() => [...window.__keyboardFixture.registers])).toEqual(before);
+});
+
+test('verified preset stays confirmed until its selection or affected settings change', async ({ page }) => {
+  await page.locator('#nav [data-view="perf"]').click();
+  await page.locator('#gamePreset').selectOption('fortnite');
+  await page.locator('#btnGamePresetApply').click();
+  await expect(page.locator('#btnGamePresetApply')).toHaveText('Preset applicato');
+  await expect(page.locator('#btnGamePresetApply')).toBeDisabled();
+  await expect(page.locator('#presetAppliedHint')).toBeVisible();
+  const saves = await page.evaluate(() => window.__keyboardFixture.saveCount);
+  // Neither a synthetic click nor revisiting the view should write the same preset again.
+  await page.locator('#btnGamePresetApply').dispatchEvent('click');
+  await page.locator('#nav [data-view="rgb"]').click();
+  await page.locator('#themeSelect').selectOption('light');
+  await page.locator('#nav [data-view="perf"]').click();
+  await expect(page.locator('#btnGamePresetApply')).toBeDisabled();
+  expect(await page.evaluate(() => window.__keyboardFixture.saveCount)).toBe(saves);
+  await page.locator('#gamePreset').selectOption('racing');
+  await expect(page.locator('#btnGamePresetApply')).toBeEnabled();
+  await expect(page.locator('#presetAppliedHint')).toBeHidden();
+  await page.locator('#gamePreset').selectOption('fortnite');
+  await expect(page.locator('#btnGamePresetApply')).toBeDisabled();
+  await page.locator('#presetRate').selectOption('0');
+  await expect(page.locator('#btnGamePresetApply')).toBeEnabled();
+  await page.locator('#presetRate').selectOption('3');
+  await expect(page.locator('#btnGamePresetApply')).toBeDisabled();
+  await page.locator('#kbdPerf [data-key="26"]').click();
+  await expect(page.locator('#btnPerfApply')).toBeEnabled();
+  await page.locator('#perfAct').fill('1.1');
+  await page.locator('#btnPerfApply').click();
+  await expect(page.locator('#btnPerfApply')).toBeEnabled();
+  await expect(page.locator('#btnGamePresetApply')).toBeEnabled();
+  await expect(page.locator('#presetStatus')).toHaveText('Modifiche da applicare');
+  await expect(page.locator('#presetAppliedHint')).toBeHidden();
+});
+
+test('a failed memory save never confirms a preset and can be retried', async ({ page }) => {
+  await page.locator('#nav [data-view="perf"]').click();
+  await page.evaluate(() => { window.__keyboardFixture.saveFailure = true; });
+  await page.locator('#btnGamePresetApply').click();
+  await expect(page.locator('#presetStatus')).toContainText('Salvataggio permanente non confermato');
+  await expect(page.locator('#btnGamePresetApply')).toBeEnabled();
+  await expect(page.locator('#btnGamePresetApply')).toHaveText('Applica preset');
+  await expect(page.locator('#presetAppliedHint')).toBeHidden();
+  await page.evaluate(() => { window.__keyboardFixture.saveFailure = false; });
+  await page.locator('#btnGamePresetApply').click();
+  await expect(page.locator('#btnGamePresetApply')).toHaveText('Preset applicato');
+  await expect(page.locator('#btnGamePresetApply')).toBeDisabled();
+});
+
+test('SOCD policy changes and a new USB session clear the previous confirmation', async ({ page }) => {
+  await page.locator('#nav [data-view="perf"]').click();
+  await page.locator('#gamePreset').selectOption('socd');
+  await page.locator('#btnGamePresetApply').click();
+  await expect(page.locator('#btnGamePresetApply')).toHaveText('Preset applicato');
+  await page.locator('#nav [data-view="socd"]').click();
+  await page.locator('#socdSeg [data-mode="3"]').click();
+  await page.locator('#btnSocdApply').click();
+  await expect(page.locator('#btnSocdApply')).toBeEnabled();
+  await page.locator('#nav [data-view="perf"]').click();
+  await expect(page.locator('#btnGamePresetApply')).toBeEnabled();
+  await expect(page.locator('#presetAppliedHint')).toBeHidden();
+  await page.locator('#btnGamePresetApply').click();
+  await expect(page.locator('#btnGamePresetApply')).toHaveText('Preset applicato');
+  await page.evaluate(() => window.__keyboardFixture.powerCycle());
+  await connectKeyboard(page);
+  await page.locator('#nav [data-view="perf"]').click();
+  await expect(page.locator('#btnGamePresetApply')).toBeEnabled();
+  await expect(page.locator('#presetAppliedHint')).toBeHidden();
+});
+
+test('an unconfirmed manual save clears success even when cached values are unchanged', async ({ page }) => {
+  await page.locator('#nav [data-view="perf"]').click();
+  await page.locator('#presetRate').selectOption('0');
+  await page.locator('#btnGamePresetApply').click();
+  await expect(page.locator('#btnGamePresetApply')).toHaveText('Preset applicato');
+  await page.locator('#kbdPerf [data-key="26"]').click();
+  await expect(page.locator('#btnPerfApply')).toBeEnabled();
+  await page.evaluate(() => { window.__keyboardFixture.saveFailure = true; });
+  await page.locator('#btnPerfApply').click();
+  await expect(page.locator('#toast')).toContainText('Salvataggio permanente non confermato');
+  await expect(page.locator('#btnGamePresetApply')).toBeEnabled();
+  await expect(page.locator('#presetAppliedHint')).toBeHidden();
 });
 
 for (const theme of ['light', 'dark']) test(`${theme}: RGB shortcuts and presets are accessible and responsive`, async ({ page }) => {
@@ -84,6 +171,10 @@ for (const theme of ['light', 'dark']) test(`${theme}: RGB shortcuts and presets
   await expect(page.locator('#mapChoices button')).toHaveCount(2);
   for (const view of ['rgb', 'perf']) {
     await page.locator(`#nav [data-view="${view}"]`).click();
+    if (view === 'perf') {
+      await page.locator('#btnGamePresetApply').click();
+      await expect(page.locator('#btnGamePresetApply')).toHaveText('Preset applicato');
+    }
     const result = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze();
     expect(result.violations.map(v => ({ id: v.id, nodes: v.nodes.map(n => n.target) }))).toEqual([]);
     for (const width of [375, 768, 1440]) {

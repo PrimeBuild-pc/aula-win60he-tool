@@ -214,6 +214,12 @@ input[type="range"] { width: 100%; accent-color: var(--accent); }
 .preset-table th { color: var(--muted); font-weight: 500; }
 .preset-table td:not(:first-child) { white-space: nowrap; }
 #presetStatus { margin: 0; }
+.preset-feedback { display: flex; align-items: center; gap: 8px; font-size: 13px; min-width: 0; overflow-wrap: anywhere; }
+.preset-feedback.is-applied { padding: 8px 12px; border: 1px solid var(--ok); border-radius: 8px; color: var(--ok); background: color-mix(in srgb, var(--ok) 8%, transparent); font-weight: 600; }
+.preset-feedback.is-error { color: var(--danger); }
+#presetAppliedIcon { line-height: 0; }
+#presetAppliedHint { margin: 10px 0 0; }
+#btnGamePresetApply.is-applied:disabled { opacity: 1; background: var(--panel-2); border-color: var(--ok); color: var(--ok); }
 .key.is-down { transform: translateY(2px); border-bottom-width: 2px; background: var(--accent); color: var(--accent-ink); }
 
 /* ---------- live test ---------- */

@@ -456,5 +456,9 @@
   "Salva in memoria le impostazioni già applicate alla tastiera.": "Save the settings already applied to the keyboard to its memory.",
   "La tastiera non risponde. Riconnettila e riprova; alcune modifiche potrebbero essere già applicate.": "The keyboard is not responding. Reconnect and retry; some changes may already be applied.",
   "Preset non verificato dopo la riconnessione.": "Preset verification failed after reconnecting.",
-  "Riconnessione non riuscita. Ricollega la tastiera e premi Connetti.": "Reconnection failed. Replug the keyboard and press Connect."
+  "Riconnessione non riuscita. Ricollega la tastiera e premi Connetti.": "Reconnection failed. Replug the keyboard and press Connect.",
+  "Preset applicato": "Preset applied",
+  "Modifiche da applicare": "Changes to apply",
+  "Scrittura e verifica: {done} / {total}": "Writing and verifying: {done} / {total}",
+  "Salvato nella memoria della tastiera. Il pulsante si riattiva se cambi preset, polling o le impostazioni dei tasti interessati.": "Saved to keyboard memory. The button becomes available again if you change the preset, polling rate or affected key settings."
 }

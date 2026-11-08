@@ -9,7 +9,8 @@ test('applied settings survive loss of volatile memory and reconnect', async ({ 
   await page.locator('#nav [data-view="perf"]').click();
   await page.locator('#gamePreset').selectOption('fps-fast');
   await page.locator('#btnGamePresetApply').click();
-  await expect(page.locator('#btnGamePresetApply')).toBeEnabled();
+  await expect(page.locator('#btnGamePresetApply')).toHaveText('Preset applicato');
+  await expect(page.locator('#btnGamePresetApply')).toBeDisabled();
   await expect(page.locator('#presetStatus')).toHaveText('Preset salvato e verificato');
   await page.locator('#nav [data-view="keymap"]').click();
   await page.locator('#layerSeg [data-layer="1"]').click();
