@@ -449,5 +449,8 @@
   "Permanent save not confirmed. Keep the keyboard connected and retry.": "Постоянное сохранение не подтверждено. Не отключайте клавиатуру и повторите попытку.",
   "Save keyboard memory": "Сохранить в память клавиатуры",
   "Memory save acknowledged": "Сохранение в память подтверждено",
-  "Save the settings already applied to the keyboard to its memory.": "Сохранить в память настройки, уже применённые к клавиатуре."
+  "Save the settings already applied to the keyboard to its memory.": "Сохранить в память настройки, уже применённые к клавиатуре.",
+  "The keyboard is not responding. Reconnect and retry; some changes may already be applied.": "Клавиатура не отвечает. Подключитесь снова и повторите попытку; часть изменений уже могла примениться.",
+  "Preset verification failed after reconnecting.": "Не удалось проверить пресет после повторного подключения.",
+  "Reconnection failed. Replug the keyboard and press Connect.": "Повторное подключение не удалось. Переподключите клавиатуру и нажмите «Подключить»."
 }

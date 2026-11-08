@@ -2,6 +2,7 @@ import Keyboard from '@sparklinkplayjoy/sdk-keyboard';
 import { range, validatePerformance, validateLight, validateBackup } from './settings.js';
 import { ADVANCED_MODES, advancedRegisters, validateMacro } from './advanced.js';
 import { gamePresetPlan } from './game-presets.js';
+import { guardUsbQueue } from './usb-queue.js';
 
 const VENDOR_ID = 0x1ca2;
 const PRODUCT_ID = 0x1902;
@@ -84,6 +85,7 @@ export class AulaKeyboard {
     this.state = null;
     this.backup = null;
     this.onDisconnect = null;
+    this.reconnecting = false;
   }
 
   static isSupported() {
@@ -96,7 +98,7 @@ export class AulaKeyboard {
     this.log('SYNCPack inviato.', 'info');
   }
 
-  async connect() {
+  async connect({ automatic = false } = {}) {
     if (!AulaKeyboard.isSupported()) {
       throw new Error('WebHID non disponibile. Apri questa pagina in Chrome o Edge.');
     }
@@ -118,7 +120,10 @@ export class AulaKeyboard {
       usagePage: USAGE_PAGES,
     });
 
-    const devices = await this.kb.getDevices();
+    // An automatic reconnect must never open another device-permission picker.
+    const devices = automatic
+      ? (await this.kb.deviceBase.hidService.getDevices()).map(device => this.kb.deviceBase.hidService.tagDevice(device))
+      : await this.kb.getDevices();
     if (!devices || devices.length === 0) {
       throw new Error('Nessuna tastiera AULA trovata. Controlla il cavo, chiudi altre schede driver e riprova.');
     }
@@ -151,13 +156,17 @@ export class AulaKeyboard {
       const type = data?.type || 'sconosciuto';
       if (type === 'disconnect' || type === 'isUpgrading_disconnect') {
         this.log(`USB: ${type}. Ricollega la tastiera se necessario.`, 'warn');
-        this.onDisconnect?.();
+        if (!this.reconnecting) this.onDisconnect?.();
       } else {
         this.log(`USB: ${type}${data?.reconnect ? ' (riconnessa)' : ''}.`);
       }
     });
 
     const hidDevice = initialized.data || device.data;
+    guardUsbQueue(this.kb.deviceBase, { onFailure: error => {
+      this.log(error.message, 'error');
+      if (!this.reconnecting) this.onDisconnect?.();
+    } });
     await this.sendRawSync(hidDevice);
     await sleep(80);
 
@@ -197,6 +206,7 @@ export class AulaKeyboard {
 
   async checked(label, fn, allowEmpty = false) {
     const result = await fn();
+    if (result?.code === 'USB_CONNECTION_LOST') throw result;
     if (isBadResult(result) || result === false || (!allowEmpty && result == null)) {
       throw new Error(`${label}: ${result?.message || 'la tastiera non ha confermato il comando'}`);
     }
@@ -206,12 +216,14 @@ export class AulaKeyboard {
   async safe(label, fn, fallback = null) {
     try {
       const result = await fn();
+      if (result?.code === 'USB_CONNECTION_LOST') throw result;
       if (isBadResult(result)) {
         this.log(`${label}: ${result.message || result}`, 'warn');
         return fallback;
       }
       return result;
     } catch (error) {
+      if (error?.code === 'USB_CONNECTION_LOST') throw error;
       this.log(`${label}: ${error?.message || error}`, 'warn');
       return fallback;
     }
@@ -481,8 +493,20 @@ export class AulaKeyboard {
         await this.writeKeyPerf(g.keys, g.values, () => onProgress?.(++done, plan.keys.length));
       }
       if (plan.socdMode != null) await this.applySocd(plan.socdMode);
-      await this.setRate(rateIndex);
+      const beforeRate = this.state;
       await this.saveSettings();
+      await this.setRate(rateIndex);
+      if (this.state !== beforeRate) {
+        for (const group of plan.groups) {
+          const fields = ['actuation', 'pressDead', 'releaseDead', ...(group.values.touchMode === 'rt' ? ['rtPress', 'rtRelease'] : [])];
+          for (const key of group.keys) {
+            const stored = await this.readKeyPerf(key);
+            if (stored.touchMode !== group.values.touchMode || fields.some(field => Math.abs(stored[field] - group.values[field]) > 0.011)) {
+              throw new Error('Preset non verificato dopo la riconnessione.');
+            }
+          }
+        }
+      }
     } catch (error) {
       throw new Error(`Preset interrotto; alcune impostazioni possono essere già salvate: ${error.message}`);
     }
@@ -510,10 +534,10 @@ export class AulaKeyboard {
   }
 
   async readKeyPerf(key) {
-    const mode = await this.kb.getPerformanceMode(key);
-    const rt = await this.kb.getRtTravel(key);
-    const single = await this.kb.getSingleTravel(key);
-    const dead = await this.kb.getDpDr(key);
+    const mode = await this.checked('Modalità tasto', () => this.kb.getPerformanceMode(key));
+    const rt = await this.checked('Rapid Trigger', () => this.kb.getRtTravel(key));
+    const single = await this.checked('Attuazione', () => this.kb.getSingleTravel(key));
+    const dead = await this.checked('Zone morte', () => this.kb.getDpDr(key));
     if ([mode, rt, single, dead].some(v => v == null || isBadResult(v))) throw new Error(`Lettura tasto ${key} fallita.`);
     const values = {
       touchMode: mode.touchMode,
@@ -609,12 +633,42 @@ export class AulaKeyboard {
 
   async setRate(index) {
     range(index, 0, 6, 'Polling', true);
-    await this.checked('Polling', () => this.kb.setRateOfReturn(index));
-    const current = await this.checked('Verifica polling', () => this.kb.getApi({ type: 'ORDER_TYPE_ROES' }));
-    if (typeof current !== 'number' || current !== index) throw new Error('Polling non verificato. Riconnetti per leggere lo stato attuale.');
-    this.state.rateIndex = current;
-    this.state.rate = RATE_LABELS[current];
+    const current = await this.checked('Lettura polling', () => this.kb.getApi({ type: 'ORDER_TYPE_ROES' }));
+    range(current, 0, 6, 'Polling', true);
+    if (current !== index) {
+      // WIN60 HE MAX restarts USB even when rewriting the same rate; preserve pending settings first.
+      await this.saveSettings();
+      this.reconnecting = true;
+      try {
+        try { await this.checked('Polling', () => this.kb.setRateOfReturn(index)); }
+        catch { this.log('Attesa riconnessione USB dopo cambio polling.', 'info'); }
+        await this.reconnectAfterRateChange(index);
+      } catch (error) {
+        this.onDisconnect?.();
+        throw error;
+      } finally { this.reconnecting = false; }
+    }
+    this.state.rateIndex = index;
+    this.state.rate = RATE_LABELS[index];
     this.log(`Polling verificato: ${this.state.rate}.`, 'ok');
+  }
+
+  async reconnectAfterRateChange(index) {
+    const deadline = Date.now() + 8000;
+    await this.disconnect().catch(() => {});
+    while (Date.now() < deadline) {
+      await sleep(200);
+      try {
+        await this.connect({ automatic: true });
+        await this.diagnose();
+        if (this.state.rateIndex !== index) throw new Error('Polling non verificato. Riconnetti per leggere lo stato attuale.');
+        await this.saveSettings();
+        return;
+      } catch {
+        await this.disconnect().catch(() => {});
+      }
+    }
+    throw new Error('Riconnessione non riuscita. Ricollega la tastiera e premi Connetti.');
   }
 
   async readLighting() {

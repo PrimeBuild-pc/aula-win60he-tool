@@ -98,6 +98,12 @@ function device(keys = [4, 7, 26, 22, 1]) {
     }
     throw new Error(`Unexpected test command ${packet[2]}`);
   };
+  // This packet-level fixture has no native USB enumeration; browser tests cover the restart itself.
+  aula.reconnectAfterRateChange = async index => {
+    const stored = await aula.checked('Verifica polling', () => aula.kb.getApi({ type: 'ORDER_TYPE_ROES' }));
+    assert.equal(stored, index);
+    await aula.saveSettings();
+  };
   return { aula, registers, packets, writes: () => writes };
 }
 

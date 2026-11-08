@@ -75,7 +75,7 @@ Apply explicitly. Selecting a single key reads its current settings. Travel is d
 
 ### Game presets
 
-Open **Performance** (or **Choose a preset** in Overview). Select a preset and review the affected keys, actuation and Rapid Trigger press/release values. Choose 1000 Hz (default) or 8000 Hz for a suitable direct USB connection, then press **Apply preset**. Previewing a preset does not write to the keyboard.
+Open **Performance** (or **Choose a preset** in Overview). Select a preset and review the affected keys, actuation and Rapid Trigger press/release values. Choose 1000 Hz (default) or 8000 Hz for a suitable direct USB connection, then press **Apply preset**. Previewing a preset does not write to the keyboard. The current polling rate is read first. If already correct, no rate write is sent. A real rate change restarts USB on this keyboard: Studio saves the preset first, reconnects automatically to the already-authorized device and checks the retained settings. Keep the cable connected during this short restart.
 
 These are Studio starting points adapted to this keyboard, not verified professional-player configurations. All presets use 0.15 mm top/bottom dead zones. They affect WASD plus Q/E/R/F/C/V/X, Left Ctrl, Left Shift and Space; unrelated keys, mappings and RGB stay unchanged.
 

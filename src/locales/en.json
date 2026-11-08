@@ -453,5 +453,8 @@
   "Salvataggio permanente non confermato. Mantieni collegata la tastiera e riprova.": "Permanent save not confirmed. Keep the keyboard connected and retry.",
   "Salva memoria tastiera": "Save keyboard memory",
   "Salvataggio memoria confermato": "Memory save acknowledged",
-  "Salva in memoria le impostazioni già applicate alla tastiera.": "Save the settings already applied to the keyboard to its memory."
+  "Salva in memoria le impostazioni già applicate alla tastiera.": "Save the settings already applied to the keyboard to its memory.",
+  "La tastiera non risponde. Riconnettila e riprova; alcune modifiche potrebbero essere già applicate.": "The keyboard is not responding. Reconnect and retry; some changes may already be applied.",
+  "Preset non verificato dopo la riconnessione.": "Preset verification failed after reconnecting.",
+  "Riconnessione non riuscita. Ricollega la tastiera e premi Connetti.": "Reconnection failed. Replug the keyboard and press Connect."
 }

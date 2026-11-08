@@ -1,18 +1,18 @@
 // WebHID boundary emulator: the browser runs the production application and its real SDK.
-export async function installKeyboard(page, { hardware = false } = {}) {
-  await page.addInitScript(({ hardware }) => {
+export async function installKeyboard(page, { hardware = false, rateIndex = 0 } = {}) {
+  await page.addInitScript(({ hardware, rateIndex }) => {
     const rows = [[], [41, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 45, 46, 42], [43, 20, 26, 8, 21, 23, 28, 24, 12, 18, 19, 47, 48, 49], [57, 4, 22, 7, 9, 10, 11, 13, 14, 15, 51, 52, 0, 40], [225, 0, 29, 27, 6, 25, 5, 17, 16, 54, 55, 56, 229], [224, 227, 226, 0, 0, 0, 44, 0, 0, 230, 101, 228, 1]];
     const keys = rows.flat().filter(Boolean);
     const registers = new Map(), colors = new Map(), staged = new Map(), pairs = new Map(), macros = new Map();
     for (const key of keys) for (const [layout, value] of [[0, key === 1 ? 0xf001 : key], [1, 1], [2, 1], [3, 1], [8, 32], [4, 500], [20, 150], [21, 150], [22, 150], [23, 150]]) registers.set(`${key}:${layout}`, value);
-    let profile = 0, rate = 0, system = 'win';
+    let profile = 0, rate = rateIndex, system = 'win';
     const globalValues = [500, 150, 150];
     const light = new Uint8Array(60);
     const palette = ['#5eead4', '#60a5fa', '#a78bfa', '#fb7185', '#fbbf24', '#34d399', '#ffffff'];
     palette.forEach((c, i) => light.set([parseInt(c.slice(5, 7), 16), parseInt(c.slice(3, 5), 16), parseInt(c.slice(1, 3), 16), 255], 5 + 4 * i));
     light[37] = 1; light[38] = 4; light[39] = 0; light[40] = 2; light[42] = 0; light[43] = 7;
     const trace = [];
-    const model = { light, registers, colors, trace, ledBrightness: 4, commitCount: 0, saveCount: 0, saveFailure: false };
+    const model = { light, registers, colors, trace, ledBrightness: 4, commitCount: 0, saveCount: 0, saveFailure: false, rateWriteCount: 0, permissionRequests: 0 };
     const snapshot = () => structuredClone({ registers: [...registers], colors: [...colors], pairs: [...pairs], macros: [...macros],
       light: [...light], globalValues: [...globalValues], profile, rate, system });
     let saved = snapshot();
@@ -37,6 +37,13 @@ export async function installKeyboard(page, { hardware = false } = {}) {
       async sendReport(_, bytes) {
         const packet = [...new Uint8Array(bytes)], command = packet[2], data = packet.slice(4, 4 + packet[1]);
         trace.push(packet);
+        if (model.dropReplies && command !== 1) return;
+        if (model.unplugOnNextWrite && command === 35 && data[0] === 1) {
+          model.unplugOnNextWrite = false;
+          this.opened = false;
+          model.disconnect();
+          throw new DOMException('The device has been disconnected.', 'NetworkError');
+        }
         if (hardware) {
           const response = Uint8Array.from(await window.hardwareSend(packet));
           if (response.length) {
@@ -57,7 +64,18 @@ export async function installKeyboard(page, { hardware = false } = {}) {
           }
           else if (op === 1) payload = Uint8Array.from([0, 1, 9, 1]);
           else if (op === 38) payload = Uint8Array.from([0, 38, ...new TextEncoder().encode('WIN 60 HE MAX')]);
-          else if (op === 80) { if (data[1] !== 255) rate = data[1]; payload = Uint8Array.from([0, op, rate]); }
+          else if (op === 80) {
+            if (data[1] !== 255) {
+              rate = data[1]; model.rateWriteCount++;
+              if (model.rebootOnRateWrite) {
+                const nextRate = rate;
+                model.powerCycle(); rate = nextRate; model.rebooting = true;
+                setTimeout(() => { model.rebooting = false; }, model.rebootDelayMs ?? 150);
+                return;
+              }
+            }
+            payload = Uint8Array.from([0, op, rate]);
+          }
           else if (op === 112) { if (data[1] !== 255) profile = data[1]; payload = Uint8Array.from([0, op, profile]); }
           else if (op === 33) payload = Uint8Array.from([0, op, system === 'win' ? 1 : 0]);
           else if (op === 48 || op === 49) { system = op === 48 ? 'win' : 'mac'; payload = Uint8Array.from([0, op, 1]); }
@@ -110,14 +128,15 @@ export async function installKeyboard(page, { hardware = false } = {}) {
         }
         const reply = new Uint8Array(64); reply.set([0x5c, payload.length, command | 128, 0]); reply.set(payload.slice(0, 60), 4);
         reply[3] = (0x35 + reply[0] + reply[1] + reply[2] + reply[reply[1] + 3]) & 255;
-        setTimeout(() => { const event = new Event('inputreport'); Object.defineProperties(event, { data: { value: new DataView(reply.buffer) }, reportId: { value: 0 }, device: { value: this } }); this.dispatchEvent(event); }, 0);
+        setTimeout(() => { const event = new Event('inputreport'); Object.defineProperties(event, { data: { value: new DataView(reply.buffer) }, reportId: { value: 0 }, device: { value: this } }); this.dispatchEvent(event); }, model.replyDelayMs ?? 0);
       }
     }
     const device = new FakeDevice(), hid = new EventTarget();
-    hid.getDevices = async () => [device]; hid.requestDevice = async () => [device];
+    hid.getDevices = async () => model.rebooting ? [] : [device];
+    hid.requestDevice = async () => { model.permissionRequests++; return [device]; };
     model.disconnect = () => { const event = new Event('disconnect'); Object.defineProperty(event, 'device', { value: device }); hid.dispatchEvent(event); };
     Object.defineProperty(navigator, 'hid', { value: hid, configurable: true });
-  }, { hardware });
+  }, { hardware, rateIndex });
 }
 
 export async function connectKeyboard(page) {
