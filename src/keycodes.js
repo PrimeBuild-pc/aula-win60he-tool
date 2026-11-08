@@ -1,5 +1,7 @@
 // HID usage IDs used by the firmware. Values >= 0x1000 are consumer (media) codes as 0x1000 | usage,
 // 0xF0xx/0xF1xx are firmware Fn/layer keys, 0xF3xx are vendor functions (lighting etc.).
+import { RGB_COMMANDS } from './rgb-shortcuts.js';
+
 const GROUPS = {
   Lettere: Object.fromEntries('ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').map((c, i) => [4 + i, c])),
   Numeri: { 30: '1', 31: '2', 32: '3', 33: '4', 34: '5', 35: '6', 36: '7', 37: '8', 38: '9', 39: '0' },
@@ -27,6 +29,7 @@ const GROUPS = {
     0x10e9: 'Vol+', 0x10ea: 'Vol-', 0x10e2: 'Mute', 0x10cd: 'Play', 0x10b5: 'Next', 0x10b6: 'Prev',
     0x1183: 'Player', 0x118a: 'Mail', 0x1192: 'Calc', 0x1194: 'PC', 0x1223: 'Web',
   },
+  RGB: RGB_COMMANDS,
   Speciali: { 1: '—', 0xf001: 'Fn' },
 };
 

@@ -65,20 +65,27 @@ Open **Performance**, select keys and choose a mode:
 
 Apply explicitly. Selecting a single key reads its current settings. Travel is displayed in millimetres; this controller's supported maximum travel is 3.4 mm. Availability and actual physical behavior depend on the keyboard and calibration.
 
-### FPS profile
+### Game presets
 
-The one-click profile applies the following defaults across the keyboard. Review them before applying: this is a convenience preset, not a performance guarantee or a game recommendation.
+Open **Performance** (or **Choose a preset** in Overview). Select a preset and review the affected keys, actuation and Rapid Trigger press/release values. Choose 1000 Hz (default) or 8000 Hz for a suitable direct USB connection, then press **Apply preset**. Previewing a preset does not write to the keyboard.
 
-| Setting | Default |
-| --- | --- |
-| Actuation | 0.5 mm |
-| Rapid Trigger press/release | 0.15 mm / 0.15 mm |
-| Top/bottom dead zones | 0.15 mm / 0.15 mm |
-| SOCD | A/D, last input priority |
-| Polling | 8000 Hz |
-| Arrows | Fn+W/A/S/D and Fn+`/` / Right Alt / Menu / Right Ctrl |
+These are Studio starting points adapted to this keyboard, not verified professional-player configurations. All presets use 0.15 mm top/bottom dead zones. They affect WASD plus Q/E/R/F/C/V/X, Left Ctrl, Left Shift and Space; unrelated keys, mappings and RGB stay unchanged.
 
-While A/D SOCD is active, use **Fn + Right Alt / Right Ctrl** for left/right. Check game and tournament rules before using SOCD or macros.
+| Preset | WASD actuation / RT | Other game keys | SOCD |
+| --- | --- | --- | --- |
+| CS2 · Precision | 0.70 / 0.30 mm | Fixed 1.50 mm, including E | Off |
+| VALORANT · Control | 0.50 / 0.20 mm | Fixed 1.20 mm | Off |
+| FPS · Responsive | 0.40 / 0.15 mm | Q/E/Ctrl/C/V/X/Shift: 0.80 / 0.25 mm RT; R/F/Space: fixed 1.20 mm | Off |
+| Fortnite · Build | 0.50 / 0.20 mm | Q/E/C/V/X/F: 0.80 / 0.25 mm RT; R/Ctrl/Shift/Space: fixed 1.20 mm | Off |
+| Competitive · A/D SOCD | 0.50 / 0.20 mm | Fixed 1.20 mm | A/D last input; W/S off |
+| Sim racing · Digital | A/D fixed 1.20 mm; W/S fixed 1.50 mm | Fixed 1.50 mm; RT off | Off |
+| Mixed use · Stable | Fixed 1.50 mm; RT off | Fixed 1.50 mm | Off |
+
+Both RT directions use the same sensitivity in these presets. The manual editor can adjust them separately. Raise sensitivity or actuation if resting fingers cause accidental input. The racing preset supplies digital key presses; it does not enable analog steering, pedals or gamepad output.
+
+Studio checks every affected key before writing. Remove macros, DKS, Rappy Snappy or other advanced actions on these keys first. Existing A/D and W/S SOCD is removed, then re-enabled on A/D only for the explicit SOCD preset. Each change is read back. If application fails partway, already verified settings may remain saved; the UI reports interruption instead of success. Reapply or restore a backup after resolving the error.
+
+The CS2 starting range and keeping E fixed follow [Wooting’s CS2 guidance](https://wooting.io/post/wooting-cs2-guide-in-game-benefits-rapid-trigger-settings-and-pro-profiles). These values are an adaptation, not a transferred Wootility profile. Valve’s [Side-stepping Skill announcement](https://store.steampowered.com/news/app/730/view/6500469346429600836) addresses hardware-assisted counter-strafing. Keep SOCD and Rappy Snappy off on Valve servers. Other named presets are Studio design choices for their input patterns; check current game/tournament rules before choosing automated direction handling.
 
 ## RGB lighting
 
@@ -88,6 +95,27 @@ Choose a static color, firmware effect or custom per-key lighting. There are 20 
 - Seven palette slots use indices **0–6**; **7** selects rainbow.
 - Choosing a color or effect from zero brightness restores a visible level. Setting the brightness slider to zero is still allowed.
 - **Apply lighting** writes the draft. **Turn RGB off** sends the off setting. **Read again** replaces the draft with the device state.
+
+### Remap RGB keyboard shortcuts
+
+Expand **RGB keyboard shortcuts** in RGB lighting. This opens the same layout editor with a pool containing only main-light commands: next/previous mode, on/off, color, brightness, direction and speed. Select base or Fn, drag a command onto a physical key, or choose the command and click the destination. Review the preview, then **Save and apply**.
+
+**Suggest RGB layout** previews replacements for only these nine Fn bindings:
+
+| Fn combination | Action |
+| --- | --- |
+| Backspace | RGB on/off |
+| Tab / Q | Next / previous effect |
+| [ / ] | Brightness down / up |
+| Comma / period | Speed down / up |
+| Backslash | Reverse direction |
+| C | Change color |
+
+The suggestion deliberately replaces those positions, even if already assigned, and leaves Enter/Delete and other positions alone. Applying from the RGB section writes only pending RGB commands; unrelated mapping drafts remain pending in Key mapping. **Discard changes** in this section discards only pending RGB commands. Applying a shortcut layout does not change the current lighting effect or colors.
+
+These shortcuts are firmware assignments intended to work after the page closes. Color cycling depends on the selected effect (the color function is a static-light command), and direction has no visible effect on modes without directional motion. A saved/read-back code confirms the binding, not the physical lighting behavior; validate the remapped controls on your keyboard. Ambient-strip commands and unrelated vendor functions are excluded from the RGB pool.
+
+### Per-key colors
 
 For per-key colors, select keys in the preview, choose a color and press **Paint selection**. Then apply. Studio activates custom mode before sending per-key colors, sends the persistence command and reads the colors back.
 

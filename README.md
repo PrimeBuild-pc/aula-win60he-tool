@@ -31,9 +31,9 @@ Configuration becomes available after a successful connection and device read. S
 
 | Feature | Controls |
 | --- | --- |
-| **Rapid Trigger** | Per-key press/release sensitivity, actuation point and top/bottom dead zones |
+| **Rapid Trigger** | Seven targeted game/use presets, per-key press/release sensitivity, actuation and dead zones |
 | **Actuation** | Fixed per-key actuation or shared global actuation |
-| **RGB lighting** | Static colors, 20 firmware effects, rainbow palette, brightness, speed, direction, per-key colors and RGB off |
+| **RGB lighting** | Static colors, 20 effects, per-key colors and a drag-and-drop editor for RGB keyboard shortcuts |
 | **Key remapping** | Drag-and-drop base/Fn layout editor, searchable F1–F24/navigation/numpad/media key pool, physical capture, preview and verified save |
 | **SOCD / Snap Tap-style input** | A/D and W/S pairs; last input, first-key priority, second-key priority or neutral |
 | **Dynamic Keystroke (DKS)** | Up to four actions with editable press/release activation phases |
@@ -72,7 +72,7 @@ Firefox and Safari do not provide the WebHID interface used here. A mobile brows
 - **Fn and SOCD:** this firmware ignores the Fn layer on SOCD-enabled keys. For left/right arrows while A/D SOCD is active, use **Fn + Right Alt / Right Ctrl** instead of Fn+A/D.
 - **Firmware updates:** unavailable. A verified official image, bootloader identification and recovery procedure are required before flashing can be offered.
 
-See the [release notes](docs/RELEASE-0.4.0.md) and [hardware verification notes](docs/RELEASE-0.3.0.md) for the scope of each check. This is beta software: keep a backup of a working setup.
+See the [release notes](docs/RELEASE-0.5.0.md) and [hardware verification notes](docs/RELEASE-0.3.0.md) for the scope of each check. This is beta software: keep a backup of a working setup.
 
 ## Common questions
 
@@ -80,11 +80,13 @@ See the [release notes](docs/RELEASE-0.4.0.md) and [hardware verification notes]
 
 Connect the keyboard, open **RGB lighting**, choose a static color or effect and press **Apply lighting**. To color individual keys, select them in the preview, choose a color, press **Paint selection**, then apply. The preview is a draft; firmware controls the actual animation.
 
+For onboard lighting controls, expand **RGB keyboard shortcuts**: drag mode, color, on/off, brightness, direction or speed commands onto either layer, then save. **Suggest RGB layout** previews nine Fn combinations. See the [shortcut guide](docs/USER_GUIDE.md#remap-rgb-keyboard-shortcuts).
+
 Brightness and speed have **five firmware levels, 0–4**. Brightness 0 is dark; choosing a color or effect from that state restores a visible level. Palette slots are 0–6, and slot 7 selects rainbow.
 
 ### How do I enable Rapid Trigger or change the actuation point?
 
-Open **Performance**, select the keys and choose the desired mode. Set the actuation, Rapid Trigger sensitivity and dead zones, then apply to the selection. The **FPS profile** in Overview applies a predefined setup across the keyboard; review its values in the [user guide](docs/USER_GUIDE.md#fps-profile).
+Open **Performance**, select the keys and choose the desired mode. Set the actuation, Rapid Trigger sensitivity and dead zones, then apply to the selection. **Choose a preset** in Overview opens seven targeted presets: CS2, VALORANT, responsive FPS, Fortnite, explicit A/D SOCD, digital sim racing and mixed use. Review their thresholds and affected keys before applying in the [preset guide](docs/USER_GUIDE.md#game-presets). SOCD is off except in its explicitly named preset.
 
 ### Why do A/D or WASD send arrows instead of letters?
 
@@ -115,7 +117,7 @@ All project documentation is maintained in **English**. Interface translations a
 - [Troubleshooting](docs/TROUBLESHOOTING.md) — USB, RGB, Fn/SOCD and macro issues
 - [Development and protocol notes](docs/DEVELOPMENT.md) — local setup, tests, architecture, localization and deployment
 - [Contributing](CONTRIBUTING.md) — reproducible reports, translations and hardware changes
-- [0.4.0 release notes](docs/RELEASE-0.4.0.md)
+- [0.5.0 release notes](docs/RELEASE-0.5.0.md)
 
 ## Run locally
 

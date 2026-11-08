@@ -1,6 +1,7 @@
 import Keyboard from '@sparklinkplayjoy/sdk-keyboard';
 import { range, validatePerformance, validateLight, validateBackup } from './settings.js';
 import { ADVANCED_MODES, advancedRegisters, validateMacro } from './advanced.js';
+import { gamePresetPlan } from './game-presets.js';
 
 const VENDOR_ID = 0x1ca2;
 const PRODUCT_ID = 0x1902;
@@ -446,6 +447,33 @@ export class AulaKeyboard {
   }
 
   async applyRate() { return this.setRate(0); }
+
+  async applyGamePreset(id, { rateIndex = 3, onProgress } = {}) {
+    if (!this.state) throw new Error('Connetti la tastiera.');
+    range(rateIndex, 0, 6, 'Polling', true);
+    const plan = gamePresetPlan(id, this.state.physical.map(p => p.keyValue));
+    const modes = new Map();
+    // Inspect all affected keys before the first write; never silently overwrite macros or DKS.
+    for (const key of plan.keys) {
+      const mode = await this.checked('Modalità attuale', () => this.kb.getPerformanceMode(key));
+      if (![0, 8].includes(mode.advancedKeyMode)) throw new Error('Rimuovi prima le azioni avanzate dai tasti del preset.');
+      modes.set(key, mode.advancedKeyMode);
+    }
+    try {
+      for (const pair of [[4, 7], [26, 22]]) {
+        if (pair.some(key => modes.get(key) === 8)) await this.removeSocd(pair);
+      }
+      let done = 0;
+      for (const g of plan.groups) {
+        await this.writeKeyPerf(g.keys, g.values, () => onProgress?.(++done, plan.keys.length));
+      }
+      if (plan.socdMode != null) await this.applySocd(plan.socdMode);
+      await this.setRate(rateIndex);
+    } catch (error) {
+      throw new Error(`Preset interrotto; alcune impostazioni possono essere già salvate: ${error.message}`);
+    }
+    return plan;
+  }
 
   async applyProfile({ sensitivity = 0.15, firstTouch = 0.5, socdMode = 0, want8k = true } = {}) {
     const steps = [];

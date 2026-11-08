@@ -3,6 +3,8 @@ import { CODE_TO_HID, KEY_GROUPS, KEY_LABELS, KEY_WIDTH, keyLabel, physicalLabel
 import { stepTrigger } from './settings.js';
 import { initWorkspace } from './workspace.js';
 import { completeFnLayout } from './fn-layout.js';
+import { RGB_COMMANDS, RGB_DESCRIPTIONS, RGB_SUGGESTIONS } from './rgb-shortcuts.js';
+import { initGamePresets } from './presets-ui.js';
 
 const $ = (id) => document.getElementById(id);
 const MAX_TRAVEL = 3.4;
@@ -37,6 +39,7 @@ const ui = {
   calibration: false,
   mapEditing: false,
   mapPoolCode: null,
+  mapRgbOnly: false,
   mapDrafts: [new Map(), new Map()],
 };
 
@@ -77,8 +80,8 @@ function setButtons() {
   $('btnConnect').textContent = ui.connected ? 'Riconnetti' : 'Connetti tastiera';
   $('btnMapApply').disabled ||= $('btnMapApply').dataset.locked === '1';
   $('btnMapDefault').disabled ||= $('btnMapApply').dataset.locked === '1';
-  $('btnMapSaveLayout').disabled ||= !ui.mapDrafts.some(draft => draft.size);
-  $('btnMapDiscard').disabled ||= !ui.mapDrafts.some(draft => draft.size);
+  $('btnMapSaveLayout').disabled ||= pendingMapCount() === 0;
+  $('btnMapDiscard').disabled ||= pendingMapCount() === 0;
   $('btnCalibrationEnd').disabled = !ui.connected || ui.busy || !ui.calibration;
   $('btnDisconnect').hidden = !ui.connected;
   $('btnDisconnect').disabled = ui.busy || ui.calibration;
@@ -209,19 +212,7 @@ $('rateSeg').addEventListener('click', (e) => {
   }, `Polling impostato a ${RATE_LABELS[b.dataset.rate]}`);
 });
 
-$('btnProfile').addEventListener('click', () => {
-  const act = Number($('pfAct').value) || 0.5;
-  const rt = Number($('pfRt').value) || 0.15;
-  $('pfProgress').hidden = false;
-  task($('btnProfile'), async () => {
-    try {
-      await aula.applyProfile({ sensitivity: rt, firstTouch: act, socdMode: 0, want8k: true });
-      await refresh();
-    } finally {
-      $('pfProgress').hidden = true;
-    }
-  }, 'Profilo FPS applicato');
-});
+$('btnProfile').addEventListener('click', () => document.querySelector('#nav [data-view="perf"]').click());
 
 $('btnFixFn').addEventListener('click', () =>
   task($('btnFixFn'), async () => {
@@ -233,7 +224,14 @@ $('btnFixFn').addEventListener('click', () =>
 // ---------- keymap ----------
 
 let mapSource;
-const draftMapOf = (layer, key) => ui.mapDrafts[layer]?.get(key) ?? mapOf(layer, key);
+const inMapScope = code => !ui.mapRgbOnly || Object.hasOwn(RGB_COMMANDS, code);
+const draftMapOf = (layer, key) => {
+  const value = ui.mapDrafts[layer]?.get(key);
+  return value != null && inMapScope(value) ? value : mapOf(layer, key);
+};
+function pendingMapCount() {
+  return ui.mapDrafts.reduce((total, draft) => total + [...draft.values()].filter(inMapScope).length, 0);
+}
 
 function renderKeymap() {
   if (mapSource !== aula.state) {
@@ -248,6 +246,14 @@ function renderKeymap() {
   }
   $('btnMapEdit').setAttribute('aria-pressed', ui.mapEditing);
   $('btnMapEdit').textContent = ui.mapEditing ? 'Termina modifica' : 'Modifica layout';
+  $('btnMapEdit').hidden = ui.mapRgbOnly;
+  $('btnMapCompleteFn').hidden = ui.mapRgbOnly;
+  $('btnMapCompleteRgb').hidden = !ui.mapRgbOnly;
+  $('mapFnSuggestions').hidden = ui.mapRgbOnly;
+  $('mapRgbSuggestions').hidden = !ui.mapRgbOnly;
+  $('mapDemoAction').textContent = ui.mapRgbOnly ? 'RGB On/Off' : 'Del';
+  $('mapDemoTarget').textContent = ui.mapRgbOnly ? 'Backspace' : 'Enter';
+  $('mapDemoCombo').textContent = ui.mapRgbOnly ? 'Fn + Backspace → RGB On/Off' : 'Fn + Enter → Del';
   for (const id of ['mapEditHelp', 'mapLayoutActions', 'mapPoolTitle', 'mapPoolHint']) $(id).hidden = !ui.mapEditing;
   for (const id of ['mapSingleEditor', 'mapSingleActions', 'mapTargetField', 'mapSingleHelp']) $(id).hidden = ui.mapEditing;
   if (ui.mapEditing) $('mapSocdWarn').hidden = true;
@@ -255,16 +261,16 @@ function renderKeymap() {
   $('mapEditor').hidden = !ui.mapEditing && ui.mapKey == null;
   $('kbdMap').classList.toggle('is-editing', ui.mapEditing);
   $('mapLayoutCard').classList.toggle('map-editing', ui.mapEditing);
-  const count = ui.mapDrafts.reduce((total, draft) => total + draft.size, 0);
+  const count = pendingMapCount();
   $('mapLayoutStatus').textContent = `Modifiche da applicare: ${count}`;
   $('mapLayoutWarning').hidden = ui.layer !== FN_LAYER || !aula.state?.performances?.some(p =>
     p.advancedKeyMode === 8 && (ui.mapDrafts[FN_LAYER].has(p.keyValue) || p.keyValue === ui.mapKey));
   drawKeyboard($('kbdMap'), {
-    label: (k) => ({ main: isFnKey(k) ? 'Fn' : keyLabel(draftMapOf(ui.layer, k)), sub: ui.layer === FN_LAYER ? physicalLabel(k) : '' }),
+    label: (k) => ({ main: isFnKey(k) ? 'Fn' : keyLabel(draftMapOf(ui.layer, k)).replace(/^RGB /, ''), sub: ui.layer === FN_LAYER ? physicalLabel(k) : '' }),
     classes: (k) => [
       k === ui.mapKey ? 'is-selected' : '',
       draftMapOf(ui.layer, k) !== (ui.layer === BASE_LAYER ? k : 1) ? 'is-changed' : '',
-      ui.mapDrafts[ui.layer].has(k) ? 'is-draft' : '',
+      ui.mapDrafts[ui.layer].has(k) && inMapScope(ui.mapDrafts[ui.layer].get(k)) ? 'is-draft' : '',
       ui.layer === FN_LAYER && [0, 1].includes(draftMapOf(FN_LAYER, k)) && !isFnKey(k) ? 'is-empty' : '',
       ui.layer === FN_LAYER && perfOf(k)?.advancedKeyMode === 8 ? 'is-socd' : '',
     ].join(' '),
@@ -276,6 +282,10 @@ function renderKeymap() {
       if (!ui.mapEditing) openMapEditor();
     },
   });
+  for (const key of $('kbdMap').querySelectorAll('.key')) {
+    const description = RGB_DESCRIPTIONS[draftMapOf(ui.layer, Number(key.dataset.key))];
+    if (description) key.title = description;
+  }
   setButtons();
 }
 
@@ -317,6 +327,7 @@ function stageMapping(key, code) {
   if (!ui.mapEditing || ui.busy || !ui.connected) return;
   if (isFnKey(key)) return toast('Il tasto Fn deve restare accessibile.', 'err');
   if (!Object.hasOwn(KEY_LABELS, code)) return;
+  if (ui.mapRgbOnly && !Object.hasOwn(RGB_COMMANDS, code)) return;
   ui.mapKey = key;
   if (mapOf(ui.layer, key) === code) ui.mapDrafts[ui.layer].delete(key);
   else ui.mapDrafts[ui.layer].set(key, code);
@@ -334,7 +345,7 @@ $('btnMapEdit').addEventListener('click', () => {
   document.dispatchEvent(new Event('studio:map'));
 });
 $('btnMapDiscard').addEventListener('click', () => {
-  ui.mapDrafts.forEach(draft => draft.clear());
+  for (const draft of ui.mapDrafts) for (const [key, code] of draft) if (inMapScope(code)) draft.delete(key);
   renderKeymap();
 });
 $('btnMapCompleteFn').addEventListener('click', () => {
@@ -344,18 +355,30 @@ $('btnMapCompleteFn').addEventListener('click', () => {
   for (const [key, code] of completeFnLayout(keys, mapping)) ui.mapDrafts[FN_LAYER].set(key, code);
   renderKeymap();
 });
-$('btnMapSaveLayout').addEventListener('click', () => task($('btnMapSaveLayout'), async () => {
-  try {
-    for (const [layer, draft] of ui.mapDrafts.entries()) {
-      for (const [key, code] of draft) {
-        await aula.setMapping(layer, key, code);
-        draft.delete(key); // Verified changes are not repeated if a later write fails.
-      }
-    }
-  } finally {
-    renderAll();
+$('btnMapCompleteRgb').addEventListener('click', () => {
+  ui.layer = FN_LAYER;
+  for (const [key, code] of RGB_SUGGESTIONS) {
+    if (!aula.state?.physical.some(p => p.keyValue === key)) continue;
+    if (mapOf(FN_LAYER, key) === code) ui.mapDrafts[FN_LAYER].delete(key);
+    else ui.mapDrafts[FN_LAYER].set(key, code);
   }
-}, 'Layout salvato e verificato'));
+  renderKeymap();
+});
+$('btnMapSaveLayout').addEventListener('click', () => {
+  const pending = ui.mapDrafts.map(draft => [...draft].filter(([, code]) => inMapScope(code)));
+  task($('btnMapSaveLayout'), async () => {
+    try {
+      for (const [layer, entries] of pending.entries()) {
+        for (const [key, code] of entries) {
+          await aula.setMapping(layer, key, code);
+          ui.mapDrafts[layer].delete(key); // Verified changes are not repeated if a later write fails.
+        }
+      }
+    } finally {
+      renderAll();
+    }
+  }, 'Layout salvato e verificato');
+});
 addEventListener('beforeunload', e => {
   if (ui.mapDrafts.some(draft => draft.size)) { e.preventDefault(); e.returnValue = ''; }
 });
@@ -416,7 +439,7 @@ $('perfMode').addEventListener('change', drawDiagram);
 function renderPerf() {
   drawKeyboard($('kbdPerf'), {
     label: (k) => ({ main: physicalLabel(k), sub: perfOf(k)?.touchMode === 'rt' ? 'RT' : '' }),
-    classes: (k) => [ui.perfSel.has(k) ? 'is-selected' : '', perfOf(k)?.touchMode === 'rt' ? 'is-rt' : ''].join(' '),
+    classes: (k) => [ui.perfSel.has(k) ? 'is-selected' : '', perfOf(k)?.touchMode === 'rt' ? 'is-rt' : '', ui.perfPresetKeys?.has(k) ? 'is-preset' : ''].join(' '),
     onClick: (k) => {
       if (ui.perfSel.has(k)) ui.perfSel.delete(k);
       else ui.perfSel.add(k);
@@ -768,7 +791,8 @@ if (!AulaKeyboard.isSupported()) {
   $('entryStatus').textContent = 'Apri questa pagina in Chrome o Edge su desktop per collegare la tastiera via USB.';
 }
 
-initWorkspace({ aula, ui, task, toast, log, renderAll, drawKeyboard, physicalRows, mapOf, refresh, setButtons, setStatus, stopLive, openMapEditor });
+initWorkspace({ aula, ui, task, toast, log, renderAll, renderKeymap, drawKeyboard, physicalRows, mapOf, refresh, setButtons, setStatus, stopLive, openMapEditor });
+initGamePresets({ aula, ui, task, renderAll, setButtons });
 drawDiagram();
 renderAll();
 setButtons();

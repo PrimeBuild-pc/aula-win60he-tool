@@ -67,6 +67,12 @@ The target is VID `0x1CA2`, PID `0x1902`, vendor usage `0xFFA0:0x0001`. Do not o
 
 Backups must be validated fully before the first write. Protect physical Fn access. Preserve a key's touch mode when removing its advanced action, and clear both members of paired functions. Do not replace checked SDK calls with unchecked success assumptions.
 
+## RGB shortcut evidence
+
+The main-light code table is `src/rgb-shortcuts.js`: `F310` next mode, `F311` direction, `F312/F313` brightness, `F314/F315` speed, `F317` on/off, `F32F` previous mode and `F336` static-light color. The reference is the [AureTrix implementation table at a fixed commit](https://github.com/AureTrix-Solutions/AureTrix_driver/blob/589ee92110d4680f1c1d5d0be4563c4d21a6f057/src/utils/keyMap.ts), not a complete manufacturer firmware specification. A read-only check of the owner's WIN60 HE MAX on 2026-11-08 found F310/F311/F312/F313/F314/F317 already assigned on its Fn layer. No mappings or performance values were written during that check.
+
+Browser/SDK tests verify encoding and readback for all nine assignments. Physical remapped behavior remains unverified, especially previous-mode and static-light color. Do not infer behavioral support from a successful register readback. Keep unknown vendor codes intact, and do not add ambient-light or unrelated vendor actions without model-specific evidence.
+
 ## Real hardware diagnostics
 
 Optional scripts require Python with the `hidapi` package and the exact keyboard. See [0.3.0 hardware notes](RELEASE-0.3.0.md) for the tested scope.

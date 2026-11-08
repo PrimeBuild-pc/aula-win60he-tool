@@ -5,10 +5,9 @@ import protocol from '@sparklinkplayjoy/protocol-keyboard';
 import { AulaKeyboard } from '../../src/aula.js';
 import { DEFAULT_LIGHT } from '../../src/settings.js';
 
-function device() {
+function device(keys = [4, 7, 26, 22, 1]) {
   const aula = new AulaKeyboard();
   aula.kb = new Keyboard({ configs: [], usage: 1, usagePage: 0xffa0 });
-  const keys = [4, 7, 26, 22, 1];
   const registers = new Map();
   for (const key of keys) for (const [layout, value] of [[0, key === 1 ? 0xf001 : key], [1, 1], [2, 1], [3, 1], [8, 32], [4, 500], [20, 150], [21, 150], [22, 150], [23, 150]]) registers.set(`${key}:${layout}`, value);
   const physical = keys.map((keyValue, i) => ({ keyValue, row: 1, col: i }));
@@ -243,4 +242,41 @@ test('Rappy Snappy enables and removes both members of a pair', async t => {
   await aula.removeAdvanced(4);
   assert.equal(registers.get('4:8') & 15, 0);
   assert.equal(registers.get('7:8') & 15, 0);
+});
+
+
+test('game presets clear SOCD, target only game keys and preserve mapping and RGB', async () => {
+  const keys = [4, 7, 26, 22, 20, 8, 21, 9, 6, 25, 27, 224, 225, 44, 40, 1];
+  const { aula, registers } = device(keys);
+  await aula.applySocd(0);
+  await aula.applySocd(0, [26, 22]);
+  const before = structuredClone(aula.state.lighting);
+  await aula.applyGamePreset('cs2');
+  assert.equal(registers.get('4:4'), 700);
+  assert.equal(registers.get('4:20'), 300);
+  assert.equal(registers.get('8:4'), 1500);
+  assert.equal((await aula.readKeyPerf(8)).touchMode, 'single');
+  assert.equal((await aula.readKeyPerf(4)).advancedKeyMode, 0);
+  assert.equal((await aula.readKeyPerf(26)).advancedKeyMode, 0);
+  assert.equal(registers.get('40:4'), 500);
+  assert.equal(registers.get('4:0'), 4);
+  assert.equal(registers.get('4:1'), 1);
+  assert.equal(aula.state.rateIndex, 3);
+  assert.deepEqual(aula.state.lighting, before);
+  assert.deepEqual(aula.state.socd, []);
+  await aula.applyGamePreset('socd');
+  assert.equal((await aula.readKeyPerf(4)).advancedKeyMode, 8);
+  assert.equal(aula.state.socd[0].mode, 0);
+  await aula.applyGamePreset('racing');
+  assert.equal((await aula.readKeyPerf(4)).touchMode, 'single');
+  assert.deepEqual(aula.state.socd, []);
+});
+
+test('preset preflight rejects advanced conflicts and invalid input before writes', async () => {
+  const { aula, registers, writes } = device();
+  registers.set('7:8', 33);
+  await assert.rejects(aula.applyGamePreset('cs2'), /azioni avanzate/);
+  await assert.rejects(aula.applyGamePreset('unknown'), /Preset/);
+  await assert.rejects(aula.applyGamePreset('cs2', { rateIndex: 7 }), /Polling/);
+  assert.equal(writes(), 0);
 });

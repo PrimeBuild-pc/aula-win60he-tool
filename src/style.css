@@ -203,6 +203,17 @@ input[type="range"] { width: 100%; accent-color: var(--accent); }
 .function-key[draggable="true"]:active { cursor: grabbing; }
 #mapLayoutStatus { margin: 0; }
 #mapLayoutActions > .hint { margin-top: 12px; }
+.key.is-preset { border-color: var(--accent-2); }
+.rgb-shortcuts { min-width: 0; }
+.rgb-shortcuts > summary { cursor: pointer; padding: 14px 18px; border: 1px solid var(--border); border-radius: 10px; background: var(--panel); font-weight: 600; }
+.rgb-shortcuts > summary:focus-visible { outline: 2px solid var(--accent-2); outline-offset: 2px; }
+.rgb-shortcuts > .hint { margin: 12px 0; }
+.preset-table-wrap { overflow-x: auto; margin: 12px 0; }
+.preset-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.preset-table th, .preset-table td { padding: 10px; border-bottom: 1px solid var(--border); text-align: left; }
+.preset-table th { color: var(--muted); font-weight: 500; }
+.preset-table td:not(:first-child) { white-space: nowrap; }
+#presetStatus { margin: 0; }
 .key.is-down { transform: translateY(2px); border-bottom-width: 2px; background: var(--accent); color: var(--accent-ink); }
 
 /* ---------- live test ---------- */

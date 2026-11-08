@@ -2,6 +2,7 @@ import { KEY_GROUPS, keyLabel, physicalLabel, CODE_TO_HID } from './keycodes.js'
 import { DEFAULT_LIGHT, LIGHT_EFFECTS, rgbFromHex } from './settings.js';
 import { initLanguage, translate } from './i18n.js';
 import { initAdvancedEditor } from './advanced-ui.js';
+import { RGB_DESCRIPTIONS } from './rgb-shortcuts.js';
 
 const $ = id => document.getElementById(id);
 const preferences = {
@@ -9,7 +10,7 @@ const preferences = {
   set(key, value) { try { localStorage.setItem(key, value); } catch { /* Storage can be disabled. */ } },
 };
 
-export function initWorkspace({ aula, ui, task, toast, log, renderAll, drawKeyboard, physicalRows, mapOf, refresh, setButtons, setStatus, stopLive }) {
+export function initWorkspace({ aula, ui, task, toast, log, renderAll, renderKeymap, drawKeyboard, physicalRows, mapOf, refresh, setButtons, setStatus, stopLive }) {
   const colorScheme = matchMedia('(prefers-color-scheme: light)');
   const theme = preferences.get('studio-theme', 'system');
   $('themeSelect').value = ['system', 'dark', 'light'].includes(theme) ? theme : 'system';
@@ -33,6 +34,16 @@ export function initWorkspace({ aula, ui, task, toast, log, renderAll, drawKeybo
       if (b === button) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current');
     }
     document.querySelectorAll('.view').forEach(el => el.classList.toggle('active', el.dataset.view === view));
+    const rgbOnly = view === 'rgb';
+    if (ui.mapRgbOnly !== rgbOnly) {
+      ui.mapRgbOnly = rgbOnly;
+      ui.mapPoolCode = null;
+      $('mapSearch').value = '';
+      if (rgbOnly) { ui.mapEditing = true; ui.layer = 1; }
+      $(rgbOnly ? 'rgbShortcutEditor' : 'mapLayoutHome').appendChild($('mapLayoutCard'));
+      renderKeymap();
+      document.dispatchEvent(new Event('studio:map'));
+    }
     if (view !== 'test') stopLive();
     if (updateHash && location.hash !== `#${view}`) history.pushState(null, '', `#${view}`);
     document.title = `WIN60 HE Studio · ${button.textContent.trim()}`;
@@ -86,19 +97,23 @@ export function initWorkspace({ aula, ui, task, toast, log, renderAll, drawKeybo
   }
   function renderFunctions() {
     const search = $('mapSearch').value.trim().toLowerCase();
+    const selectedCategory = ui.mapRgbOnly ? 'RGB' : category;
+    $('mapCategories').hidden = ui.mapRgbOnly;
     $('mapChoices').replaceChildren();
     for (const b of $('mapCategories').children) {
-      b.classList.toggle('active', b.dataset.group === category);
-      b.setAttribute('aria-pressed', b.dataset.group === category);
+      b.classList.toggle('active', b.dataset.group === selectedCategory);
+      b.setAttribute('aria-pressed', b.dataset.group === selectedCategory);
     }
     for (const [group, codes] of Object.entries(KEY_GROUPS)) {
-      if (category !== 'Tutte' && category !== group) continue;
+      if (selectedCategory !== 'Tutte' && selectedCategory !== group) continue;
       for (const [code, name] of Object.entries(codes)) {
-        if (search && !`${name} ${group} ${translate(group, $('languageSelect').value)} ${aliases[group] || ''}`.toLowerCase().includes(search)) continue;
+        const description = RGB_DESCRIPTIONS[code] || '';
+        if (search && !`${name} ${group} ${translate(group, $('languageSelect').value)} ${aliases[group] || ''} ${description} ${translate(description, $('languageSelect').value)}`.toLowerCase().includes(search)) continue;
         const b = document.createElement('button');
         b.textContent = name === '—' ? 'Nessuna' : name;
         b.className = 'function-key';
-        b.title = group;
+        b.title = description || group;
+        if (description) b.setAttribute('aria-label', description);
         const active = ui.mapEditing ? ui.mapPoolCode === Number(code) : $('mapTarget').value === code;
         b.setAttribute('aria-pressed', active);
         b.classList.toggle('active', active);

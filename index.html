@@ -98,7 +98,7 @@
           <div id="status" class="status status--idle" role="status">Non connesso</div>
           <button id="btnConnect" class="primary block">Connetti tastiera</button>
           <button id="btnDisconnect" hidden>Disconnetti</button>
-          <a class="source-link" href="https://github.com/PrimeBuild-pc/aula-win60he-tool" target="_blank" rel="noopener">Open source · v0.4.0 ↗</a>
+          <a class="source-link" href="https://github.com/PrimeBuild-pc/aula-win60he-tool" target="_blank" rel="noopener">Open source · v0.5.0 ↗</a>
         </div>
       </aside>
 
@@ -135,17 +135,9 @@
 
           <div class="grid2">
             <article class="card">
-              <h2>Profilo FPS competitivo</h2>
-              <p class="hint">
-                Applica a tutti i tasti: Rapid Trigger, attuazione bassa, SOCD su A/D (l'ultimo premuto vince),
-                frecce sul layer Fn e polling 8 kHz.
-              </p>
-              <div class="fields">
-                <label>Attuazione (mm)<input id="pfAct" type="number" min="0.1" max="3.4" step="0.05" value="0.5" /></label>
-                <label>Sensibilità RT (mm)<input id="pfRt" type="number" min="0.01" max="2" step="0.01" value="0.15" /></label>
-              </div>
-              <button id="btnProfile" class="primary" data-needs-device>Applica profilo FPS</button>
-              <div class="progress" id="pfProgress" hidden><div></div></div>
+              <h2>Preset per gioco</h2>
+              <p class="hint">CS2, VALORANT, FPS, Fortnite e sim racing: confronta soglie, tasti e SOCD prima di applicare.</p>
+              <button id="btnProfile" class="primary" data-needs-device>Scegli un preset</button>
             </article>
 
             <article class="card">
@@ -174,7 +166,7 @@
             <h1>Mappatura tasti</h1>
             <p>Clicca un tasto, scegli la nuova funzione, applica. Le modifiche restano salvate sulla tastiera.</p>
           </header>
-          <article class="card" id="mapLayoutCard">
+          <div id="mapLayoutHome"><article class="card" id="mapLayoutCard">
             <div class="toolbar">
               <div class="seg" id="layerSeg">
                 <button data-layer="0" class="active">Layer base</button>
@@ -185,7 +177,7 @@
             <div id="mapEditHelp" class="map-edit-help" hidden>
               <strong>Trascina i tasti dal pool sulla tastiera per creare il tuo layout.</strong>
               <p class="hint">Scegli il layer Fn per le combinazioni con Fn. Puoi anche scegliere un tasto dal pool e poi cliccare sulla posizione desiderata.</p>
-              <div class="mapping-preview" aria-hidden="true"><kbd>Del</kbd><span>↑</span><kbd>Enter</kbd><span>Fn + Enter → Del</span></div>
+              <div class="mapping-preview" aria-hidden="true"><kbd id="mapDemoAction">Del</kbd><span>↑</span><kbd id="mapDemoTarget">Enter</kbd><span id="mapDemoCombo">Fn + Enter → Del</span></div>
               <p class="hint">Le modifiche sono un’anteprima: premi Salva e applica per scriverle sulla tastiera.</p>
             </div>
             <div class="kbd-wrap" id="mapKeyboardWrap"><div class="kbd" id="kbdMap"></div></div>
@@ -194,9 +186,11 @@
                 <button id="btnMapSaveLayout" class="primary" data-needs-device>Salva e applica</button>
                 <button id="btnMapDiscard" data-needs-device>Annulla modifiche</button>
                 <button id="btnMapCompleteFn" data-needs-device>Completa slot Fn vuoti</button>
+                <button id="btnMapCompleteRgb" data-needs-device hidden>Suggerisci layout RGB</button>
                 <span id="mapLayoutStatus" class="hint" role="status" aria-live="polite"></span>
               </div>
-              <p class="hint">Suggerimenti Fn: Enter = Canc, 1–0 / − / = = F1–F12, F/G = Home/End, H/J = PgUp/PgDn. Le assegnazioni esistenti restano invariate.</p>
+              <p class="hint" id="mapFnSuggestions">Suggerimenti Fn: Enter = Canc, 1–0 / − / = = F1–F12, F/G = Home/End, H/J = PgUp/PgDn. Le assegnazioni esistenti restano invariate.</p>
+              <p class="hint" id="mapRgbSuggestions" hidden>Il suggerimento sostituisce in anteprima solo 9 combinazioni Fn: Backspace on/off, Tab/Q modalità, [/] luminosità, virgola/punto velocità, barra inversa direzione e C colore. Salva e applica scrive solo i comandi RGB in questa sezione.</p>
               <p id="mapLayoutWarning" class="hint warn" hidden>Questo tasto ha il SOCD attivo: il firmware ignora il layer Fn su di esso.</p>
             </div>
             <p class="hint keyboard-help" id="mapSingleHelp">1. Seleziona un tasto <span>→</span> 2. Scegli la funzione <span>→</span> 3. Salva sulla tastiera</p>
@@ -224,7 +218,7 @@
               Questo tasto ha il SOCD attivo: il firmware ignora il layer Fn su di esso.
             </p>
           </div>
-          </article>
+          </article></div>
         </section>
 
         <!-- Prestazioni -->
@@ -233,6 +227,19 @@
             <h1>Prestazioni</h1>
             <p>Seleziona uno o più tasti e imposta attuazione e Rapid Trigger.</p>
           </header>
+          <article class="card">
+            <h2>Preset per gioco</h2>
+            <p class="hint">Punti di partenza adattati alla AULA, non configurazioni certificate dei pro. Solo i tasti elencati vengono modificati.</p>
+            <div class="fields advanced-fields">
+              <label>Preset<select id="gamePreset" data-needs-device></select></label>
+              <label>Polling del preset<select id="presetRate" data-needs-device><option value="3">1000 Hz</option><option value="0">8000 Hz · USB diretta</option></select></label>
+            </div>
+            <p id="presetDescription" class="hint"></p>
+            <div class="preset-table-wrap"><table class="preset-table"><thead><tr><th scope="col">Tasti</th><th scope="col">Attuazione</th><th scope="col">RT pressione / rilascio</th></tr></thead><tbody id="presetRows"></tbody></table></div>
+            <p id="presetSocd" class="hint"></p>
+            <p class="hint">Zone morte alta/bassa: 0,15 mm. Gli altri tasti, la mappatura e gli RGB restano invariati. Rimuovi prima eventuali macro o azioni avanzate sui tasti elencati.</p>
+            <div class="row"><button id="btnGamePresetApply" class="primary" data-needs-device>Applica preset</button><span id="presetStatus" class="hint" role="status"></span></div>
+          </article>
           <article class="card">
             <div class="toolbar">
               <div class="row">
@@ -359,6 +366,11 @@
 
         <section class="view" data-view="rgb">
           <header class="view-head"><span class="eyebrow">MAKE IT YOURS</span><h1>Illuminazione RGB</h1><p>Una palette tutta tua. Scegli un effetto o dipingi ogni singolo tasto.</p></header>
+          <details id="rgbShortcuts" class="rgb-shortcuts">
+            <summary>Scorciatoie RGB sulla tastiera</summary>
+            <p class="hint">Assegna solo comandi RGB: modalità, on/off, colore, luminosità, direzione e velocità. Trascinali sulla tastiera, poi salva. Il cambio colore dipende dall’effetto; la direzione richiede un effetto compatibile.</p>
+            <div id="rgbShortcutEditor"></div>
+          </details>
           <article class="card rgb-stage">
             <div class="toolbar"><span class="stage-label"><span class="connection-dot"></span> ANTEPRIMA COLORE</span><span id="rgbSelection" class="hint">Nessun tasto selezionato</span></div>
             <div class="kbd-wrap"><div class="kbd" id="kbdRgb"></div></div>
