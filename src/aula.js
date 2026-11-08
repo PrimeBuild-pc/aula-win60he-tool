@@ -217,6 +217,19 @@ export class AulaKeyboard {
     }
   }
 
+  async saveSettings() {
+    if (!this.kb || !this.state) throw new Error('Connetti la tastiera.');
+    // SDK getApi discards this generic ACK; inspect the verified KB2 1.0.9 response directly.
+    const packet = new Uint8Array(64);
+    packet.set([0x5c, 3, 0, 0, 2, 0xff, 0xff]);
+    packet[3] = computeKb2CheckSum(packet);
+    const ack = await this.checked('Salvataggio memoria tastiera', () => this.kb.deviceBase.sendData(packet));
+    if (!(ack instanceof Uint8Array) || ack.length < 4 || ack.length > 60 || ack[0] !== 0 || ack[1] !== 2 || ack[2] !== 255 || ack[3] !== 255) {
+      throw new Error('Salvataggio permanente non confermato. Mantieni collegata la tastiera e riprova.');
+    }
+    this.log('Comando di salvataggio memoria confermato dalla tastiera.', 'ok');
+  }
+
   flattenLayout(layout) {
     const result = [];
     if (!Array.isArray(layout)) return result;
@@ -469,6 +482,7 @@ export class AulaKeyboard {
       }
       if (plan.socdMode != null) await this.applySocd(plan.socdMode);
       await this.setRate(rateIndex);
+      await this.saveSettings();
     } catch (error) {
       throw new Error(`Preset interrotto; alcune impostazioni possono essere già salvate: ${error.message}`);
     }

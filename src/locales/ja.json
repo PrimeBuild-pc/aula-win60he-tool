@@ -445,5 +445,9 @@
   "RGB: decrease speed": "RGB：速度を下げる",
   "RGB: on/off": "RGB：オン／オフ",
   "RGB: previous mode": "RGB：前のモード",
-  "RGB: change color": "RGB：色変更"
+  "RGB: change color": "RGB：色変更",
+  "Permanent save not confirmed. Keep the keyboard connected and retry.": "永続保存を確認できません。キーボードを接続したまま再試行してください。",
+  "Save keyboard memory": "キーボードのメモリに保存",
+  "Memory save acknowledged": "メモリ保存の応答を確認しました",
+  "Save the settings already applied to the keyboard to its memory.": "キーボードに適用済みの設定をメモリに保存します。"
 }

@@ -12,7 +12,21 @@ export async function installKeyboard(page, { hardware = false } = {}) {
     palette.forEach((c, i) => light.set([parseInt(c.slice(5, 7), 16), parseInt(c.slice(3, 5), 16), parseInt(c.slice(1, 3), 16), 255], 5 + 4 * i));
     light[37] = 1; light[38] = 4; light[39] = 0; light[40] = 2; light[42] = 0; light[43] = 7;
     const trace = [];
-    const model = { light, registers, colors, trace, ledBrightness: 4, commitCount: 0 };
+    const model = { light, registers, colors, trace, ledBrightness: 4, commitCount: 0, saveCount: 0, saveFailure: false };
+    const snapshot = () => structuredClone({ registers: [...registers], colors: [...colors], pairs: [...pairs], macros: [...macros],
+      light: [...light], globalValues: [...globalValues], profile, rate, system });
+    let saved = snapshot();
+    model.snapshot = snapshot;
+    model.powerCycle = () => {
+      for (const [map, values] of [[registers, saved.registers], [colors, saved.colors], [pairs, saved.pairs], [macros, saved.macros]]) {
+        map.clear(); for (const [key, value] of structuredClone(values)) map.set(key, value);
+      }
+      light.set(saved.light); staged.clear();
+      globalValues.splice(0, globalValues.length, ...saved.globalValues);
+      ({ profile, rate, system } = saved);
+      model.ledBrightness = light[37] & 1 ? light[38] : 0;
+      model.disconnect();
+    };
     window.__keyboardFixture = model;
 
     class FakeDevice extends EventTarget {
@@ -37,7 +51,11 @@ export async function installKeyboard(page, { hardware = false } = {}) {
           payload.fill(0); payload.set(new TextEncoder().encode('App V1.15'), 26);
         } else if (command === 0) {
           const op = data[0];
-          if (op === 1) payload = Uint8Array.from([0, 1, 9, 1]);
+          if (op === 2) {
+            if (model.saveFailure) payload = Uint8Array.from([0, 2, 0, 0]);
+            else { saved = snapshot(); model.saveCount++; payload = Uint8Array.from([0, 2, 255, 255]); }
+          }
+          else if (op === 1) payload = Uint8Array.from([0, 1, 9, 1]);
           else if (op === 38) payload = Uint8Array.from([0, 38, ...new TextEncoder().encode('WIN 60 HE MAX')]);
           else if (op === 80) { if (data[1] !== 255) rate = data[1]; payload = Uint8Array.from([0, op, rate]); }
           else if (op === 112) { if (data[1] !== 255) profile = data[1]; payload = Uint8Array.from([0, op, profile]); }

@@ -101,7 +101,7 @@ function setButtons() {
 }
 
 // Runs one device operation at a time; live polling is paused so responses don't interleave.
-async function task(button, fn, okMessage) {
+async function task(button, fn, okMessage, { persist = false } = {}) {
   if (ui.busy) return;
   ui.busy = true;
   setButtons();
@@ -111,6 +111,7 @@ async function task(button, fn, okMessage) {
   if (button) button.textContent = 'Attendi…';
   try {
     await fn();
+    if (persist) await aula.saveSettings();
     if (okMessage) toast(okMessage);
   } catch (error) {
     const msg = error?.message || String(error);
@@ -209,7 +210,7 @@ $('rateSeg').addEventListener('click', (e) => {
   task(null, async () => {
     await aula.setRate(Number(b.dataset.rate));
     renderOverview();
-  }, `Polling impostato a ${RATE_LABELS[b.dataset.rate]}`);
+  }, `Polling impostato a ${RATE_LABELS[b.dataset.rate]}`, { persist: true });
 });
 
 $('btnProfile').addEventListener('click', () => document.querySelector('#nav [data-view="perf"]').click());
@@ -218,7 +219,7 @@ $('btnFixFn').addEventListener('click', () =>
   task($('btnFixFn'), async () => {
     await aula.fixFnArrows();
     renderAll();
-  }, 'Frecce Fn impostate'),
+  }, 'Frecce Fn impostate', { persist: true }),
 );
 
 // ---------- keymap ----------
@@ -371,9 +372,10 @@ $('btnMapSaveLayout').addEventListener('click', () => {
       for (const [layer, entries] of pending.entries()) {
         for (const [key, code] of entries) {
           await aula.setMapping(layer, key, code);
-          ui.mapDrafts[layer].delete(key); // Verified changes are not repeated if a later write fails.
         }
       }
+      await aula.saveSettings();
+      for (const [layer, entries] of pending.entries()) for (const [key] of entries) ui.mapDrafts[layer].delete(key);
     } finally {
       renderAll();
     }
@@ -412,10 +414,10 @@ async function applyMapping(value) {
 }
 
 $('btnMapApply').addEventListener('click', () =>
-  task($('btnMapApply'), () => applyMapping(Number($('mapTarget').value)), 'Mappatura salvata'),
+  task($('btnMapApply'), () => applyMapping(Number($('mapTarget').value)), 'Mappatura salvata', { persist: true }),
 );
 $('btnMapDefault').addEventListener('click', () =>
-  task($('btnMapDefault'), () => applyMapping(ui.layer === BASE_LAYER ? ui.mapKey : 1), 'Tasto ripristinato'),
+  task($('btnMapDefault'), () => applyMapping(ui.layer === BASE_LAYER ? ui.mapKey : 1), 'Tasto ripristinato', { persist: true }),
 );
 
 // ---------- performance ----------
@@ -500,7 +502,7 @@ $('btnPerfApply').addEventListener('click', () => {
       bar.hidden = true;
       bar.firstElementChild.style.removeProperty('--p');
     }
-  }, `Salvato su ${keys.length} tasti`);
+  }, `Salvato su ${keys.length} tasti`, { persist: true });
 });
 
 function drawDiagram() {
@@ -542,13 +544,13 @@ $('btnSocdApply').addEventListener('click', () =>
   task($('btnSocdApply'), async () => {
     await aula.applySocd(ui.socdMode, ui.socdPair);
     renderAll();
-  }, 'SOCD salvato e verificato'),
+  }, 'SOCD salvato e verificato', { persist: true }),
 );
 $('btnSocdRemove').addEventListener('click', () =>
   task($('btnSocdRemove'), async () => {
     await aula.removeSocd(ui.socdPair);
     renderAll();
-  }, 'SOCD disattivato'),
+  }, 'SOCD disattivato', { persist: true }),
 );
 
 // ---------- live test ----------
@@ -740,7 +742,7 @@ $('btnRestore').addEventListener('click', () =>
   task($('btnRestore'), async () => {
     await aula.restoreBackup();
     await refresh();
-  }, 'Backup ripristinato'),
+  }, 'Backup ripristinato', { persist: true }),
 );
 
 // ---------- navigation & connect ----------

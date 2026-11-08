@@ -34,6 +34,7 @@ function device(keys = [4, 7, 26, 22, 1]) {
     if (write) writes++;
     if (packet[2] === 0) {
       const command = data[0];
+      if (command === 2) return Uint8Array.from([0, 2, 255, 255]);
       if (command === 80) {
         if (data[1] !== 255) rate = data[1];
         return Uint8Array.from([0, 80, rate]);
@@ -279,4 +280,17 @@ test('preset preflight rejects advanced conflicts and invalid input before write
   await assert.rejects(aula.applyGamePreset('unknown'), /Preset/);
   await assert.rejects(aula.applyGamePreset('cs2', { rateIndex: 7 }), /Polling/);
   assert.equal(writes(), 0);
+});
+
+
+test('explicit save uses the documented KB2 command and rejects missing or wrong ACKs', async () => {
+  const { aula, packets } = device();
+  await aula.saveSettings();
+  assert.deepEqual(packets.at(-1).slice(0, 7), [92, 3, 0, 147, 2, 255, 255]);
+  aula.kb.deviceBase.sendData = async () => { const ack = new Uint8Array(60); ack.set([0, 2, 255, 255]); return ack; };
+  await aula.saveSettings();
+  for (const ack of [null, false, new Error('Transport failed'), Uint8Array.from([0, 2, 0, 0]), Uint8Array.from([0, 3, 255, 255])]) {
+    aula.kb.deviceBase.sendData = async () => ack;
+    await assert.rejects(aula.saveSettings());
+  }
 });

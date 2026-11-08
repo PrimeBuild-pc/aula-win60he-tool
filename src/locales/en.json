@@ -449,5 +449,9 @@
   "RGB: riduci velocità": "RGB: decrease speed",
   "RGB: accendi/spegni": "RGB: on/off",
   "RGB: modalità precedente": "RGB: previous mode",
-  "RGB: cambia colore": "RGB: change color"
+  "RGB: cambia colore": "RGB: change color",
+  "Salvataggio permanente non confermato. Mantieni collegata la tastiera e riprova.": "Permanent save not confirmed. Keep the keyboard connected and retry.",
+  "Salva memoria tastiera": "Save keyboard memory",
+  "Salvataggio memoria confermato": "Memory save acknowledged",
+  "Salva in memoria le impostazioni già applicate alla tastiera.": "Save the settings already applied to the keyboard to its memory."
 }

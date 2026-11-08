@@ -2,8 +2,8 @@ import { spawn } from 'node:child_process';
 import { createInterface } from 'node:readline';
 import { fileURLToPath } from 'node:url';
 
-export function createHidTransport() {
-  const bridge = spawn('python', [fileURLToPath(new URL('./hid-bridge.py', import.meta.url))], { windowsHide: true, stdio: ['pipe', 'pipe', 'inherit'] });
+export function createHidTransport({ allowSave = false } = {}) {
+  const bridge = spawn('python', [fileURLToPath(new URL('./hid-bridge.py', import.meta.url)), ...(allowSave ? ['--allow-save'] : [])], { windowsHide: true, stdio: ['pipe', 'pipe', 'inherit'] });
   const lines = createInterface({ input: bridge.stdout });
   let pending;
   lines.on('line', line => {

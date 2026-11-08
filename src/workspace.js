@@ -78,11 +78,12 @@ export function initWorkspace({ aula, ui, task, toast, log, renderAll, renderKey
     renderAll();
   }));
   $('btnRefresh').addEventListener('click', () => task($('btnRefresh'), refresh, 'Stato aggiornato'));
-  $('btnSystemApply').addEventListener('click', () => task($('btnSystemApply'), async () => { await aula.switchSystem($('deviceSystem').value); renderDevice(); }, 'Modalità sistema verificata'));
+  $('btnSaveSettings').addEventListener('click', () => task($('btnSaveSettings'), () => aula.saveSettings(), 'Salvataggio memoria confermato'));
+  $('btnSystemApply').addEventListener('click', () => task($('btnSystemApply'), async () => { await aula.switchSystem($('deviceSystem').value); renderDevice(); }, 'Modalità sistema verificata', { persist: true }));
   $('btnSuperResponse').addEventListener('click', () => task($('btnSuperResponse'), async () => {
     const light = await aula.readLighting();
     await aula.writeLighting({ ...light, superResponse: $('deviceSuperResponse').checked }); renderAll();
-  }, 'Super Response verificata'));
+  }, 'Super Response verificata', { persist: true }));
   document.addEventListener('visibilitychange', () => { if (document.hidden) stopLive(); });
 
   // Mapping: searchable functions, category filters, physical key capture and draft feedback.
@@ -269,12 +270,12 @@ export function initWorkspace({ aula, ui, task, toast, log, renderAll, renderKey
     if (!$('rgbHex').reportValidity()) throw new Error('Colore HEX non valido.');
     light = structuredClone(await aula.applyLighting(light, light.type === 'custom' ? [...custom.values()] : []));
     lightSource = aula.state.lighting; dirty = false; renderRgb();
-  }, 'RGB salvati e verificati'));
+  }, 'RGB salvati e verificati', { persist: true }));
   $('btnRgbOff').addEventListener('click', () => task($('btnRgbOff'), async () => {
     const current = await aula.readLighting();
     light = structuredClone(await aula.writeLighting({ ...current, open: false }));
     lightSource = aula.state.lighting; dirty = false; renderRgb();
-  }, 'RGB spenti'));
+  }, 'RGB spenti', { persist: true }));
   $('btnRgbRead').addEventListener('click', () => task($('btnRgbRead'), async () => {
     light = structuredClone(await aula.readLighting());
     custom = new Map((await aula.readCustomLighting()).map(c => [c.key, c]));
@@ -293,7 +294,7 @@ export function initWorkspace({ aula, ui, task, toast, log, renderAll, renderKey
   });
   $('profileSeg').addEventListener('click', e => {
     const b = e.target.closest('button'); if (!b || b.disabled) return;
-    task(b, async () => { await aula.switchProfile(Number(b.dataset.profile)); await refresh(); ui.followPerf = null; }, 'Profilo hardware selezionato');
+    task(b, async () => { await aula.switchProfile(Number(b.dataset.profile)); await refresh(); ui.followPerf = null; }, 'Profilo hardware selezionato', { persist: true });
   });
   $('btnCalibrationStart').addEventListener('click', () => task($('btnCalibrationStart'), async () => {
     // SDK 1.0.24 returns null for a valid generic ACK; transport errors return Error.
@@ -306,7 +307,7 @@ export function initWorkspace({ aula, ui, task, toast, log, renderAll, renderKey
     ui.calibration = false;
     $('calibrationStatus').textContent = 'Calibrazione terminata. Verifica i sensori in Test tasti.';
     await refresh();
-  }, 'Calibrazione terminata'));
+  }, 'Calibrazione terminata', { persist: true }));
 
   let advancedKey = null;
   const advancedEditor = initAdvancedEditor({ ui, toast });
@@ -333,12 +334,12 @@ export function initWorkspace({ aula, ui, task, toast, log, renderAll, renderKey
       await aula.writeMacro(advancedKey, macro.events, macro.options);
     } else await aula.writeAdvanced(advancedKey, mode, advancedEditor.config());
     await refresh();
-  }, 'Configurazione assegnata e riletta'));
+  }, 'Configurazione assegnata e riletta', { persist: true }));
   $('btnAdvancedRemove').addEventListener('click', () => task($('btnAdvancedRemove'), async () => {
     if (advancedKey == null) throw new Error('Seleziona un tasto.');
     await aula.removeAdvanced(advancedKey);
     await refresh();
-  }, 'Funzione avanzata rimossa'));
+  }, 'Funzione avanzata rimossa', { persist: true }));
 
   function renderDevice() {
     const s = aula.state;

@@ -445,5 +445,9 @@
   "RGB: decrease speed": "RGB: reducir velocidad",
   "RGB: on/off": "RGB: encender/apagar",
   "RGB: previous mode": "RGB: modo anterior",
-  "RGB: change color": "RGB: cambiar color"
+  "RGB: change color": "RGB: cambiar color",
+  "Permanent save not confirmed. Keep the keyboard connected and retry.": "Guardado permanente no confirmado. Mantén el teclado conectado e inténtalo de nuevo.",
+  "Save keyboard memory": "Guardar memoria del teclado",
+  "Memory save acknowledged": "Guardado en memoria confirmado",
+  "Save the settings already applied to the keyboard to its memory.": "Guarda en memoria los ajustes ya aplicados al teclado."
 }

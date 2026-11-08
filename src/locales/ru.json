@@ -445,5 +445,9 @@
   "RGB: decrease speed": "RGB: уменьшить скорость",
   "RGB: on/off": "RGB: вкл./выкл.",
   "RGB: previous mode": "RGB: предыдущий режим",
-  "RGB: change color": "RGB: сменить цвет"
+  "RGB: change color": "RGB: сменить цвет",
+  "Permanent save not confirmed. Keep the keyboard connected and retry.": "Постоянное сохранение не подтверждено. Не отключайте клавиатуру и повторите попытку.",
+  "Save keyboard memory": "Сохранить в память клавиатуры",
+  "Memory save acknowledged": "Сохранение в память подтверждено",
+  "Save the settings already applied to the keyboard to its memory.": "Сохранить в память настройки, уже применённые к клавиатуре."
 }

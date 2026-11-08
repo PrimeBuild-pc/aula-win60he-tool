@@ -25,7 +25,7 @@ The keyboard is also commonly written as **AULA WIN60 HE MAX**. This project sup
 
 The interface follows your browser language when supported. You can choose **English, Italiano, Русский, Español or 日本語** and a light, dark or system theme in the workspace. Your language and theme are remembered in this browser.
 
-Configuration becomes available after a successful connection and device read. Settings are written to the keyboard through the firmware; editing a local draft alone does not save it. The connection screen returns if the USB connection is lost.
+Configuration becomes available after a successful connection and device read. Settings are written to the keyboard through the firmware; editing a local draft alone does not save it. Apply/Save also sends the explicit keyboard-memory save command and checks its response. A real power-loss check is distinct from closing the browser connection; see [persistence verification](docs/DEVELOPMENT.md#power-loss-persistence-check). The connection screen returns if the USB connection is lost.
 
 ## What you can configure
 
@@ -72,7 +72,7 @@ Firefox and Safari do not provide the WebHID interface used here. A mobile brows
 - **Fn and SOCD:** this firmware ignores the Fn layer on SOCD-enabled keys. For left/right arrows while A/D SOCD is active, use **Fn + Right Alt / Right Ctrl** instead of Fn+A/D.
 - **Firmware updates:** unavailable. A verified official image, bootloader identification and recovery procedure are required before flashing can be offered.
 
-See the [release notes](docs/RELEASE-0.5.0.md) and [hardware verification notes](docs/RELEASE-0.3.0.md) for the scope of each check. This is beta software: keep a backup of a working setup.
+See the [release notes](docs/RELEASE-0.5.1.md) and [hardware verification notes](docs/RELEASE-0.3.0.md) for the scope of each check. This is beta software: keep a backup of a working setup.
 
 ## Common questions
 
@@ -117,7 +117,7 @@ All project documentation is maintained in **English**. Interface translations a
 - [Troubleshooting](docs/TROUBLESHOOTING.md) — USB, RGB, Fn/SOCD and macro issues
 - [Development and protocol notes](docs/DEVELOPMENT.md) — local setup, tests, architecture, localization and deployment
 - [Contributing](CONTRIBUTING.md) — reproducible reports, translations and hardware changes
-- [0.5.0 release notes](docs/RELEASE-0.5.0.md)
+- [0.5.1 release notes](docs/RELEASE-0.5.1.md)
 
 ## Run locally
 

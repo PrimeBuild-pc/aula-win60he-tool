@@ -95,3 +95,22 @@ After deployment, check the workflow conclusion **and** the served version/bundl
 ## Documentation and public search
 
 Keep documentation in English and interface localization in the catalogs. Keep README instructions, public guide, app metadata and known limitations consistent. See [discoverability notes](DISCOVERABILITY.md) for repository topics, canonical URLs, sitemap scope and search-engine verification limits.
+
+
+## Power-loss persistence check
+
+KB2 defines `ORDER_TYPE_SAVING_PARAMETER` (`0x02`); see the [SDK command table](https://sparklinkplayjoy.github.io/keyboard-docs/keyboard/type.html). The installed SDK discards the generic result in `getApi`, so `AulaKeyboard.saveSettings()` sends the same command through its serialized transport and checks the response. On the owner's protocol 1.0.9 keyboard, the ACK payload was `00 02 FF FF`; the browser SDK retains trailing report padding. Missing, negative or unrelated responses cannot produce success.
+
+UI write tasks call this once after their verified batch. The game-preset method performs its own final save. Do not save once per key or during read-only sensor polling. Low-level driver setters write/read registers; scripts calling those setters must explicitly call `saveSettings()` after their batch. A save ACK alone is not proof of retained data after power loss.
+
+The local diagnostic bridge remains read-only for key/performance/SOCD settings. `createHidTransport({ allowSave: true })` permits only the explicit parameter-save command in addition to its existing permissions; it does not enable remapping, reset or firmware writes.
+
+```bash
+node scripts/check-persistence.mjs --capture
+# Remove keyboard USB power for at least five seconds, reconnect, and keep settings unchanged.
+node scripts/check-persistence.mjs
+```
+
+Capture reads the current profile's four layers, per-key performance registers, active advanced registers where available, SOCD, global performance, lighting, all per-key colors, polling, system and selected profile, then asks the device to save. It refuses to overwrite the baseline. Results are in ignored `.persistence-check/before.json` and `.persistence-check/result.json`, outside Playwright's temporary output folder. Archive these files before starting a later independent capture. The check does not assert that a physical unplug occurred; record the owner's action separately. It cannot verify unreadable macro event bytes, calibration extrema or other hardware profiles.
+
+Browser regression tests separately model volatile working memory and saved state. Their power-cycle operation discards unsaved values. Tests exercise settings through the production app/SDK, then compare retained mappings, performance, SOCD, lighting, global values, advanced/macro metadata, system and profile selection. These emulated tests supplement the physical check; they do not replace it.

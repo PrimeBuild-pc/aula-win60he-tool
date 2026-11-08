@@ -22,6 +22,14 @@ Open **Backup** and download a complete JSON backup before making large changes.
 
 Loading a file validates it before Restore becomes available. Restore changes the **currently selected hardware profile**. It is not a factory reset. Fn access is protected. Legacy schema v3 files remain importable, subject to validation and supported payloads.
 
+## Saving to keyboard memory
+
+**Apply/Save** first writes and reads back the changed values, then sends the keyboard's explicit parameter-save command. Keep USB connected until the operation finishes. This includes base/Fn mappings, RGB shortcuts, per-key performance, game presets, SOCD, lighting, system mode, selected hardware profile, advanced actions, macros and calibration completion. Read-only navigation, diagnostics and sensor polling do not save memory.
+
+If the save response is missing or unexpected, the app reports failure. Layout drafts are cleared only after the save command is acknowledged, so you can retry. **Device settings → Save keyboard memory** retries saving settings already applied to the keyboard. Unsaved on-screen edits must still be applied through their editor.
+
+A disconnect/reconnect in the browser only reopens the USB interface; it does not establish that settings survive power loss. A real persistence check removes the keyboard's USB power, reconnects it and compares the read-back configuration with a pre-unplug snapshot. See the [hardware procedure](DEVELOPMENT.md#power-loss-persistence-check). Only configurations actually compared across that cycle are physically verified. Macro event bytes and calibration extrema remain outside the readback supported by this test.
+
 ## Map keys and the Fn layer
 
 1. Open **Key mapping** and select the base or Fn layer.
@@ -33,7 +41,7 @@ The base-layer Fn key is protected. **Reset key** restores the selected mapping;
 
 For a whole layout, press **Edit layout**. Select **Fn layer**, then drag keycaps from the pool below onto the keyboard. You can also select a pool key and click its destination, or focus both buttons in turn and press Enter. The keyboard stays visible as you scroll through the pool. Search and categories include navigation, F1–F24, the numeric keypad, modifiers and media keys. Fn itself stays protected.
 
-Edits are local previews, marked with a dashed border. You can edit both layers before pressing **Save and apply**; it writes and reads back each changed assignment. **Discard changes** removes both drafts without writing them. If a write fails, already verified changes remain saved and the remaining draft stays available for retry. Changing hardware profile, reconnecting or reading a new device configuration discards pending previews with a notification; apply or discard them first.
+Edits are local previews, marked with a dashed border. You can edit both layers before pressing **Save and apply**; it writes and reads back each changed assignment. **Discard changes** removes both drafts without writing them. If a write or memory save fails, the layout draft stays available for retry; some values may already have changed in the keyboard’s working memory. Changing hardware profile, reconnecting or reading a new device configuration discards pending previews with a notification; apply or discard them first.
 
 **Fill empty Fn slots** previews useful assignments on all 60 non-Fn positions. It preserves existing assignments, including vendor functions, and fills only empty positions. Use **Save and apply** to save the result. In an empty Fn layout the suggestions include:
 

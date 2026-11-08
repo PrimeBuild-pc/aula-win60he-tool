@@ -15,7 +15,7 @@ try:
             packet = json.loads(line)
             if len(packet) != 64 or packet[0] != 0x5C or packet[2] not in [0, 1, 24, 35, 41, 42, 43, 44]:
                 raise RuntimeError('Only KB2 diagnostics and RGB packets are allowed')
-            if packet[2] == 0 and packet[4] not in [1, 33, 38, 80, 112]:
+            if packet[2] == 0 and packet[4] not in [1, 33, 38, 80, 112] and not (packet[4] == 2 and '--allow-save' in sys.argv):
                 raise RuntimeError('Only information queries are allowed')
             if packet[2] == 0 and packet[5:7] != [255, 255]:
                 raise RuntimeError('Information writes are disabled in this diagnostic bridge')
