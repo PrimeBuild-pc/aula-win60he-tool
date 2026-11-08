@@ -383,5 +383,21 @@
   "Invalid backup format.": "Некорректный формат резервной копии.",
   "This backup belongs to a different keyboard.": "Резервная копия относится к другой клавиатуре.",
   "The shared buffer supports one macro sequence per profile.": "Общий буфер допускает одну последовательность макроса на профиль.",
-  "Invalid macro event state.": "Некорректное состояние события макроса."
+  "Invalid macro event state.": "Некорректное состояние события макроса.",
+  "Edit layout": "Изменить раскладку",
+  "Finish editing": "Завершить редактирование",
+  "Drag keycaps from the pool onto the keyboard to set your layout.": "Перетащите клавиши из набора на клавиатуру, чтобы создать раскладку.",
+  "Select the Fn layer for Fn combinations. You can also select a keycap from the pool, then click its destination.": "Выберите слой Fn для сочетаний с Fn. Можно выбрать клавишу из набора и нажать нужную позицию.",
+  "Changes are a preview: press Save and apply to write them to the keyboard.": "Изменения показаны в предпросмотре. Нажмите «Сохранить и применить», чтобы записать их на клавиатуру.",
+  "Save and apply": "Сохранить и применить",
+  "Discard changes": "Отменить изменения",
+  "Fill empty Fn slots": "Заполнить пустые позиции Fn",
+  "Fn suggestions: Enter = Delete, 1–0 / − / = = F1–F12, F/G = Home/End, H/J = PgUp/PgDn. Existing assignments are preserved.": "Подсказки Fn: Enter = Delete, 1–0 / − / = = F1–F12, F/G = Home/End, H/J = PgUp/PgDn. Текущие назначения сохраняются.",
+  "Keycap pool": "Набор клавиш",
+  "Drag a keycap onto the keyboard above, or select it and click its destination.": "Перетащите клавишу на клавиатуру выше или выберите её и нажмите нужную позицию.",
+  "Preview discarded: the keyboard configuration changed.": "Предпросмотр отменён: конфигурация клавиатуры изменилась.",
+  "Save or discard changes before leaving edit mode.": "Сохраните или отмените изменения перед выходом из редактора.",
+  "Layout saved and verified": "Раскладка сохранена и проверена",
+  "Numeric keypad": "Цифровая клавиатура",
+  "Pending changes: {count}": "Изменений к применению: {count}"
 }

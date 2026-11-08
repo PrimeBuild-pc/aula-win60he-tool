@@ -31,6 +31,28 @@ Loading a file validates it before Restore becomes available. Restore changes th
 
 The base-layer Fn key is protected. **Reset key** restores the selected mapping; it is not a whole-keyboard reset. Category names and search aliases support the interface languages. Physical key legends such as `LCtrl` and `F5` remain recognizable HID labels.
 
+For a whole layout, press **Edit layout**. Select **Fn layer**, then drag keycaps from the pool below onto the keyboard. You can also select a pool key and click its destination, or focus both buttons in turn and press Enter. The keyboard stays visible as you scroll through the pool. Search and categories include navigation, F1–F24, the numeric keypad, modifiers and media keys. Fn itself stays protected.
+
+Edits are local previews, marked with a dashed border. You can edit both layers before pressing **Save and apply**; it writes and reads back each changed assignment. **Discard changes** removes both drafts without writing them. If a write fails, already verified changes remain saved and the remaining draft stays available for retry. Changing hardware profile, reconnecting or reading a new device configuration discards pending previews with a notification; apply or discard them first.
+
+**Fill empty Fn slots** previews useful assignments on all 60 non-Fn positions. It preserves existing assignments, including vendor functions, and fills only empty positions. Use **Save and apply** to save the result. In an empty Fn layout the suggestions include:
+
+| Combination | Action |
+| --- | --- |
+| Fn + Enter | Delete / Canc (HID 76, forward delete) |
+| Fn + 1–0, −, = | F1–F12 |
+| Fn + Backspace / Tab | Insert / Print Screen |
+| Fn + F / G / H / J | Home / End / Page Up / Page Down |
+| Fn + [ / ] / Caps | Scroll Lock / Pause / Num Lock |
+| Fn + W/A/S/D | Up / Left / Down / Right |
+| Fn + `/` / Right Alt / Menu / Right Ctrl | Up / Left / Down / Right |
+| Fn + U/I/O, K/L/;, Z/X/C, Q/E | Numeric keypad 7–9, 4–6, 1–3, 0/decimal |
+| Fn + R/T/Y/P/' | Keypad divide / multiply / subtract / add / Enter |
+| Fn + V/B/N/M | Previous track / play-pause / next track / calculator |
+| Fn + comma / period / Space | Volume down / up / mute |
+
+These are suggestions for empty slots, not an overwrite preset: existing mappings may differ. Numeric-keypad digits follow Num Lock behavior. Delete is sent by the keyboard after saving; entering BIOS with Fn+Enter still depends on the motherboard accepting that key and the keyboard being available before boot. This boot-time behavior has not been physically verified.
+
 **Set Fn arrows** in Overview restores WASD letters on the base layer and puts arrows on the Fn layer. SOCD-enabled keys ignore their Fn assignments in this firmware; use the alternative Fn combinations below.
 
 ## Rapid Trigger and actuation

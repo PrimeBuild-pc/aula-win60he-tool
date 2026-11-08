@@ -383,5 +383,21 @@
   "Invalid backup format.": "Formato de copia de seguridad no válido.",
   "This backup belongs to a different keyboard.": "Esta copia de seguridad pertenece a otro teclado.",
   "The shared buffer supports one macro sequence per profile.": "El búfer compartido admite una secuencia de macro por perfil.",
-  "Invalid macro event state.": "Estado de evento de macro no válido."
+  "Invalid macro event state.": "Estado de evento de macro no válido.",
+  "Edit layout": "Editar distribución",
+  "Finish editing": "Terminar edición",
+  "Drag keycaps from the pool onto the keyboard to set your layout.": "Arrastra teclas del panel al teclado para crear tu distribución.",
+  "Select the Fn layer for Fn combinations. You can also select a keycap from the pool, then click its destination.": "Selecciona la capa Fn para combinaciones con Fn. También puedes elegir una tecla del panel y hacer clic en su destino.",
+  "Changes are a preview: press Save and apply to write them to the keyboard.": "Los cambios son una vista previa: pulsa Guardar y aplicar para escribirlos en el teclado.",
+  "Save and apply": "Guardar y aplicar",
+  "Discard changes": "Descartar cambios",
+  "Fill empty Fn slots": "Completar posiciones Fn vacías",
+  "Fn suggestions: Enter = Delete, 1–0 / − / = = F1–F12, F/G = Home/End, H/J = PgUp/PgDn. Existing assignments are preserved.": "Sugerencias Fn: Enter = Supr, 1–0 / − / = = F1–F12, F/G = Inicio/Fin, H/J = RePág/AvPág. Se conservan las asignaciones existentes.",
+  "Keycap pool": "Panel de teclas",
+  "Drag a keycap onto the keyboard above, or select it and click its destination.": "Arrastra una tecla al teclado de arriba, o selecciónala y haz clic en su destino.",
+  "Preview discarded: the keyboard configuration changed.": "Vista previa descartada: cambió la configuración del teclado.",
+  "Save or discard changes before leaving edit mode.": "Guarda o descarta los cambios antes de salir del modo de edición.",
+  "Layout saved and verified": "Distribución guardada y verificada",
+  "Numeric keypad": "Teclado numérico",
+  "Pending changes: {count}": "Cambios por aplicar: {count}"
 }

@@ -189,6 +189,20 @@ input[type="range"] { width: 100%; accent-color: var(--accent); }
 .key.is-changed .key-main { color: var(--accent); }
 .key.is-empty .key-main { color: var(--muted); opacity: .5; }
 .key.is-selected { outline: 2px solid var(--accent); outline-offset: 1px; }
+.key.is-draft { border-color: var(--warn); border-style: dashed; }
+.key.is-drop-target { outline: 3px solid var(--accent); outline-offset: 2px; }
+.map-edit-help { padding: 14px; margin-bottom: 16px; border: 1px dashed var(--accent); border-radius: 10px; background: var(--panel-2); }
+.map-edit-help .hint:last-child { margin-bottom: 0; }
+.map-edit-help .mapping-preview { margin: 12px 0; flex-wrap: wrap; }
+.map-edit-help .mapping-preview kbd { min-height: 32px; min-width: 48px; font-size: 14px; }
+.map-edit-help .mapping-preview > span { font-size: 15px; }
+.map-pool { border-top: 1px solid var(--border); margin-top: 18px; padding-top: 18px; }
+.map-editing #mapKeyboardWrap { position: sticky; top: 8px; z-index: 2; padding: 8px 0; background: var(--panel); }
+.is-editing .key { cursor: copy; }
+.function-key[draggable="true"] { cursor: grab; border-bottom-width: 3px; }
+.function-key[draggable="true"]:active { cursor: grabbing; }
+#mapLayoutStatus { margin: 0; }
+#mapLayoutActions > .hint { margin-top: 12px; }
 .key.is-down { transform: translateY(2px); border-bottom-width: 2px; background: var(--accent); color: var(--accent-ink); }
 
 /* ---------- live test ---------- */

@@ -3,7 +3,7 @@
 const GROUPS = {
   Lettere: Object.fromEntries('ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').map((c, i) => [4 + i, c])),
   Numeri: { 30: '1', 31: '2', 32: '3', 33: '4', 34: '5', 35: '6', 36: '7', 37: '8', 38: '9', 39: '0' },
-  Funzione: Object.fromEntries(Array.from({ length: 12 }, (_, i) => [58 + i, `F${i + 1}`])),
+  Funzione: Object.fromEntries(Array.from({ length: 24 }, (_, i) => [i < 12 ? 58 + i : 104 + i - 12, `F${i + 1}`])),
   Controllo: {
     40: 'Enter', 41: 'Esc', 42: 'Backspace', 43: 'Tab', 44: 'Space', 57: 'Caps', 101: 'Menu',
     70: 'PrtSc', 71: 'ScrLk', 72: 'Pause',
@@ -14,6 +14,11 @@ const GROUPS = {
   Navigazione: {
     73: 'Ins', 74: 'Home', 75: 'PgUp', 76: 'Del', 77: 'End', 78: 'PgDn',
     79: '→', 80: '←', 81: '↓', 82: '↑',
+  },
+  'Tastierino numerico': {
+    83: 'NumLock', 84: 'Num /', 85: 'Num *', 86: 'Num -', 87: 'Num +', 88: 'Num Enter',
+    89: 'Num 1', 90: 'Num 2', 91: 'Num 3', 92: 'Num 4', 93: 'Num 5', 94: 'Num 6',
+    95: 'Num 7', 96: 'Num 8', 97: 'Num 9', 98: 'Num 0', 99: 'Num .', 103: 'Num =',
   },
   Modificatori: {
     224: 'LCtrl', 225: 'LShift', 226: 'LAlt', 227: 'LWin', 228: 'RCtrl', 229: 'RShift', 230: 'RAlt', 231: 'RWin',
@@ -50,12 +55,18 @@ export const CODE_TO_HID = (() => {
   for (let i = 0; i < 26; i += 1) m[`Key${String.fromCharCode(65 + i)}`] = 4 + i;
   for (let i = 1; i <= 9; i += 1) m[`Digit${i}`] = 29 + i;
   m.Digit0 = 39;
-  for (let i = 1; i <= 12; i += 1) m[`F${i}`] = 57 + i;
+  for (let i = 1; i <= 24; i += 1) m[`F${i}`] = i <= 12 ? 57 + i : 104 + i - 13;
   Object.assign(m, {
     Enter: 40, Escape: 41, Backspace: 42, Tab: 43, Space: 44, Minus: 45, Equal: 46, BracketLeft: 47,
     BracketRight: 48, Backslash: 49, Semicolon: 51, Quote: 52, Backquote: 53, Comma: 54, Period: 55,
     Slash: 56, CapsLock: 57, ContextMenu: 101, ControlLeft: 224, ShiftLeft: 225, AltLeft: 226, MetaLeft: 227,
     ControlRight: 228, ShiftRight: 229, AltRight: 230, MetaRight: 231,
+    Insert: 73, Home: 74, PageUp: 75, Delete: 76, End: 77, PageDown: 78,
+    ArrowRight: 79, ArrowLeft: 80, ArrowDown: 81, ArrowUp: 82,
+    PrintScreen: 70, ScrollLock: 71, Pause: 72, NumLock: 83,
+    NumpadDivide: 84, NumpadMultiply: 85, NumpadSubtract: 86, NumpadAdd: 87, NumpadEnter: 88,
+    Numpad1: 89, Numpad2: 90, Numpad3: 91, Numpad4: 92, Numpad5: 93, Numpad6: 94,
+    Numpad7: 95, Numpad8: 96, Numpad9: 97, Numpad0: 98, NumpadDecimal: 99, NumpadEqual: 103,
   });
   return m;
 })();

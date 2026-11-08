@@ -34,7 +34,7 @@ Configuration becomes available after a successful connection and device read. S
 | **Rapid Trigger** | Per-key press/release sensitivity, actuation point and top/bottom dead zones |
 | **Actuation** | Fixed per-key actuation or shared global actuation |
 | **RGB lighting** | Static colors, 20 firmware effects, rainbow palette, brightness, speed, direction, per-key colors and RGB off |
-| **Key remapping** | Searchable keys, function/media keys, physical key capture, base layer and Fn layer |
+| **Key remapping** | Drag-and-drop base/Fn layout editor, searchable F1–F24/navigation/numpad/media key pool, physical capture, preview and verified save |
 | **SOCD / Snap Tap-style input** | A/D and W/S pairs; last input, first-key priority, second-key priority or neutral |
 | **Dynamic Keystroke (DKS)** | Up to four actions with editable press/release activation phases |
 | **Multi-Point Trigger (MPT)** | Three actions at three increasing key depths |
@@ -89,6 +89,10 @@ Open **Performance**, select the keys and choose the desired mode. Set the actua
 ### Why do A/D or WASD send arrows instead of letters?
 
 The base layer may contain arrow assignments. **Set Fn arrows** in Overview restores W/A/S/D as letters and places arrows on the Fn layer. If SOCD is enabled, its firmware interaction with Fn still applies. See [troubleshooting](docs/TROUBLESHOOTING.md#wasd-or-ad-type-arrows-or-stop-typing).
+
+### How do I add Delete and the missing full-size keyboard keys?
+
+Open **Key mapping → Edit layout → Fn layer → Fill empty Fn slots**. Review the preview and press **Save and apply**. Empty slots receive **Fn+Enter = Delete/Canc**, F1–F12, navigation, the numeric keypad and media controls. Existing assignments stay in place. Customize either layer by dragging a keycap from the pool onto the keyboard, or select the keycap and click its destination. See the [Fn layout guide](docs/USER_GUIDE.md#map-keys-and-the-fn-layer) for the suggested combinations and SOCD interaction.
 
 ### Is this the official AULA software? Does it install a driver?
 

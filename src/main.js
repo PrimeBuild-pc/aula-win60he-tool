@@ -1,7 +1,8 @@
 import { AulaKeyboard, BASE_LAYER, FN_LAYER, KEYCODES, RATE_LABELS } from './aula.js';
-import { CODE_TO_HID, KEY_GROUPS, KEY_WIDTH, keyLabel, physicalLabel } from './keycodes.js';
+import { CODE_TO_HID, KEY_GROUPS, KEY_LABELS, KEY_WIDTH, keyLabel, physicalLabel } from './keycodes.js';
 import { stepTrigger } from './settings.js';
 import { initWorkspace } from './workspace.js';
+import { completeFnLayout } from './fn-layout.js';
 
 const $ = (id) => document.getElementById(id);
 const MAX_TRAVEL = 3.4;
@@ -34,6 +35,9 @@ const ui = {
   live: false,
   socdPair: [KEYCODES.A, KEYCODES.D],
   calibration: false,
+  mapEditing: false,
+  mapPoolCode: null,
+  mapDrafts: [new Map(), new Map()],
 };
 
 // ---------- helpers ----------
@@ -73,6 +77,8 @@ function setButtons() {
   $('btnConnect').textContent = ui.connected ? 'Riconnetti' : 'Connetti tastiera';
   $('btnMapApply').disabled ||= $('btnMapApply').dataset.locked === '1';
   $('btnMapDefault').disabled ||= $('btnMapApply').dataset.locked === '1';
+  $('btnMapSaveLayout').disabled ||= !ui.mapDrafts.some(draft => draft.size);
+  $('btnMapDiscard').disabled ||= !ui.mapDrafts.some(draft => draft.size);
   $('btnCalibrationEnd').disabled = !ui.connected || ui.busy || !ui.calibration;
   $('btnDisconnect').hidden = !ui.connected;
   $('btnDisconnect').disabled = ui.busy || ui.calibration;
@@ -226,24 +232,55 @@ $('btnFixFn').addEventListener('click', () =>
 
 // ---------- keymap ----------
 
+let mapSource;
+const draftMapOf = (layer, key) => ui.mapDrafts[layer]?.get(key) ?? mapOf(layer, key);
+
 function renderKeymap() {
-  for (const b of $('layerSeg').children) b.classList.toggle('active', Number(b.dataset.layer) === ui.layer);
+  if (mapSource !== aula.state) {
+    if (ui.mapDrafts.some(draft => draft.size)) toast('Anteprima annullata: la configurazione della tastiera è cambiata.', 'err');
+    ui.mapDrafts.forEach(draft => draft.clear());
+    ui.mapPoolCode = null;
+    mapSource = aula.state;
+  }
+  for (const b of $('layerSeg').children) {
+    b.classList.toggle('active', Number(b.dataset.layer) === ui.layer);
+    b.setAttribute('aria-pressed', Number(b.dataset.layer) === ui.layer);
+  }
+  $('btnMapEdit').setAttribute('aria-pressed', ui.mapEditing);
+  $('btnMapEdit').textContent = ui.mapEditing ? 'Termina modifica' : 'Modifica layout';
+  for (const id of ['mapEditHelp', 'mapLayoutActions', 'mapPoolTitle', 'mapPoolHint']) $(id).hidden = !ui.mapEditing;
+  for (const id of ['mapSingleEditor', 'mapSingleActions', 'mapTargetField', 'mapSingleHelp']) $(id).hidden = ui.mapEditing;
+  if (ui.mapEditing) $('mapSocdWarn').hidden = true;
+  $('mapEmpty').hidden = ui.mapEditing || ui.mapKey != null;
+  $('mapEditor').hidden = !ui.mapEditing && ui.mapKey == null;
+  $('kbdMap').classList.toggle('is-editing', ui.mapEditing);
+  $('mapLayoutCard').classList.toggle('map-editing', ui.mapEditing);
+  const count = ui.mapDrafts.reduce((total, draft) => total + draft.size, 0);
+  $('mapLayoutStatus').textContent = `Modifiche da applicare: ${count}`;
+  $('mapLayoutWarning').hidden = ui.layer !== FN_LAYER || !aula.state?.performances?.some(p =>
+    p.advancedKeyMode === 8 && (ui.mapDrafts[FN_LAYER].has(p.keyValue) || p.keyValue === ui.mapKey));
   drawKeyboard($('kbdMap'), {
-    label: (k) => ({ main: keyLabel(mapOf(ui.layer, k)), sub: ui.layer === FN_LAYER ? physicalLabel(k) : '' }),
+    label: (k) => ({ main: isFnKey(k) ? 'Fn' : keyLabel(draftMapOf(ui.layer, k)), sub: ui.layer === FN_LAYER ? physicalLabel(k) : '' }),
     classes: (k) => [
       k === ui.mapKey ? 'is-selected' : '',
-      mapOf(ui.layer, k) !== (ui.layer === BASE_LAYER ? k : 1) ? 'is-changed' : '',
-      ui.layer === FN_LAYER && mapOf(FN_LAYER, k) === 1 ? 'is-empty' : '',
+      draftMapOf(ui.layer, k) !== (ui.layer === BASE_LAYER ? k : 1) ? 'is-changed' : '',
+      ui.mapDrafts[ui.layer].has(k) ? 'is-draft' : '',
+      ui.layer === FN_LAYER && [0, 1].includes(draftMapOf(FN_LAYER, k)) && !isFnKey(k) ? 'is-empty' : '',
+      ui.layer === FN_LAYER && perfOf(k)?.advancedKeyMode === 8 ? 'is-socd' : '',
     ].join(' '),
     onClick: (k) => {
+      if (ui.busy || !ui.connected) return;
+      if (ui.mapEditing && ui.mapPoolCode != null) return stageMapping(k, ui.mapPoolCode);
       ui.mapKey = k;
       renderKeymap();
-      openMapEditor();
+      if (!ui.mapEditing) openMapEditor();
     },
   });
+  setButtons();
 }
 
 function openMapEditor() {
+  if (ui.mapEditing) return;
   const k = ui.mapKey;
   if (k == null) return;
   const current = mapOf(ui.layer, k);
@@ -270,10 +307,75 @@ $('mapTarget').innerHTML = Object.entries(KEY_GROUPS)
 
 $('layerSeg').addEventListener('click', (e) => {
   const b = e.target.closest('button');
-  if (!b) return;
+  if (!b || ui.busy) return;
   ui.layer = Number(b.dataset.layer);
   renderKeymap();
   openMapEditor();
+});
+
+function stageMapping(key, code) {
+  if (!ui.mapEditing || ui.busy || !ui.connected) return;
+  if (isFnKey(key)) return toast('Il tasto Fn deve restare accessibile.', 'err');
+  if (!Object.hasOwn(KEY_LABELS, code)) return;
+  ui.mapKey = key;
+  if (mapOf(ui.layer, key) === code) ui.mapDrafts[ui.layer].delete(key);
+  else ui.mapDrafts[ui.layer].set(key, code);
+  renderKeymap();
+  $('kbdMap').querySelector(`[data-key="${key}"]`)?.focus({ preventScroll: true });
+}
+
+$('btnMapEdit').addEventListener('click', () => {
+  // Keep pending drafts visible until they are applied or explicitly discarded.
+  if (ui.mapEditing && ui.mapDrafts.some(draft => draft.size)) return toast('Salva o annulla le modifiche prima di uscire.', 'err');
+  ui.mapEditing = !ui.mapEditing;
+  ui.mapPoolCode = null;
+  renderKeymap();
+  if (!ui.mapEditing) openMapEditor();
+  document.dispatchEvent(new Event('studio:map'));
+});
+$('btnMapDiscard').addEventListener('click', () => {
+  ui.mapDrafts.forEach(draft => draft.clear());
+  renderKeymap();
+});
+$('btnMapCompleteFn').addEventListener('click', () => {
+  ui.layer = FN_LAYER;
+  const keys = physicalRows().flat().map(p => p.keyValue);
+  const mapping = new Map(keys.map(key => [key, draftMapOf(FN_LAYER, key)]));
+  for (const [key, code] of completeFnLayout(keys, mapping)) ui.mapDrafts[FN_LAYER].set(key, code);
+  renderKeymap();
+});
+$('btnMapSaveLayout').addEventListener('click', () => task($('btnMapSaveLayout'), async () => {
+  try {
+    for (const [layer, draft] of ui.mapDrafts.entries()) {
+      for (const [key, code] of draft) {
+        await aula.setMapping(layer, key, code);
+        draft.delete(key); // Verified changes are not repeated if a later write fails.
+      }
+    }
+  } finally {
+    renderAll();
+  }
+}, 'Layout salvato e verificato'));
+addEventListener('beforeunload', e => {
+  if (ui.mapDrafts.some(draft => draft.size)) { e.preventDefault(); e.returnValue = ''; }
+});
+
+const dragType = 'application/x-win60-keycode';
+$('kbdMap').addEventListener('dragover', e => {
+  const key = e.target.closest('[data-key]');
+  if (!ui.mapEditing || ui.busy || !ui.connected || !e.dataTransfer.types.includes(dragType) || !key || isFnKey(Number(key.dataset.key))) return;
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'copy';
+  $('kbdMap').querySelectorAll('.is-drop-target').forEach(el => el.classList.remove('is-drop-target'));
+  key.classList.add('is-drop-target');
+});
+$('kbdMap').addEventListener('dragleave', e => e.target.closest('[data-key]')?.classList.remove('is-drop-target'));
+$('kbdMap').addEventListener('drop', e => {
+  e.preventDefault();
+  $('kbdMap').querySelectorAll('.is-drop-target').forEach(el => el.classList.remove('is-drop-target'));
+  const key = e.target.closest('[data-key]');
+  const value = e.dataTransfer.getData(dragType);
+  if (key && /^\d+$/.test(value)) stageMapping(Number(key.dataset.key), Number(value));
 });
 
 async function applyMapping(value) {

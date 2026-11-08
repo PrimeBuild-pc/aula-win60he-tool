@@ -174,28 +174,48 @@
             <h1>Mappatura tasti</h1>
             <p>Clicca un tasto, scegli la nuova funzione, applica. Le modifiche restano salvate sulla tastiera.</p>
           </header>
-          <article class="card">
+          <article class="card" id="mapLayoutCard">
             <div class="toolbar">
               <div class="seg" id="layerSeg">
                 <button data-layer="0" class="active">Layer base</button>
                 <button data-layer="1">Layer Fn</button>
               </div>
+              <button id="btnMapEdit" data-needs-device aria-pressed="false">Modifica layout</button>
             </div>
-            <div class="kbd-wrap"><div class="kbd" id="kbdMap"></div></div>
-            <p class="hint keyboard-help">1. Seleziona un tasto <span>→</span> 2. Scegli la funzione <span>→</span> 3. Salva sulla tastiera</p>
-          </article>
+            <div id="mapEditHelp" class="map-edit-help" hidden>
+              <strong>Trascina i tasti dal pool sulla tastiera per creare il tuo layout.</strong>
+              <p class="hint">Scegli il layer Fn per le combinazioni con Fn. Puoi anche scegliere un tasto dal pool e poi cliccare sulla posizione desiderata.</p>
+              <div class="mapping-preview" aria-hidden="true"><kbd>Del</kbd><span>↑</span><kbd>Enter</kbd><span>Fn + Enter → Del</span></div>
+              <p class="hint">Le modifiche sono un’anteprima: premi Salva e applica per scriverle sulla tastiera.</p>
+            </div>
+            <div class="kbd-wrap" id="mapKeyboardWrap"><div class="kbd" id="kbdMap"></div></div>
+            <div id="mapLayoutActions" hidden>
+              <div class="row">
+                <button id="btnMapSaveLayout" class="primary" data-needs-device>Salva e applica</button>
+                <button id="btnMapDiscard" data-needs-device>Annulla modifiche</button>
+                <button id="btnMapCompleteFn" data-needs-device>Completa slot Fn vuoti</button>
+                <span id="mapLayoutStatus" class="hint" role="status" aria-live="polite"></span>
+              </div>
+              <p class="hint">Suggerimenti Fn: Enter = Canc, 1–0 / − / = = F1–F12, F/G = Home/End, H/J = PgUp/PgDn. Le assegnazioni esistenti restano invariate.</p>
+              <p id="mapLayoutWarning" class="hint warn" hidden>Questo tasto ha il SOCD attivo: il firmware ignora il layer Fn su di esso.</p>
+            </div>
+            <p class="hint keyboard-help" id="mapSingleHelp">1. Seleziona un tasto <span>→</span> 2. Scegli la funzione <span>→</span> 3. Salva sulla tastiera</p>
           <div class="empty-state" id="mapEmpty"><strong>Da quale tasto iniziamo?</strong><span>Seleziona un tasto nella tastiera qui sopra. Puoi esplorare le funzioni anche senza collegarla.</span></div>
-          <article class="card" id="mapEditor" hidden>
+          <div class="map-pool" id="mapEditor" hidden>
+            <h2 id="mapPoolTitle" hidden>Pool di tasti</h2>
+            <p id="mapPoolHint" class="hint" hidden>Trascina un tasto sulla tastiera qui sopra, oppure selezionalo e clicca sulla destinazione.</p>
+            <div id="mapSingleEditor">
             <h2>Tasto <span id="mapKeyName"></span></h2>
             <p class="hint" id="mapCurrent"></p>
             <div class="mapping-preview"><kbd id="mapFrom">A</kbd><span>→</span><kbd id="mapTo">A</kbd><span id="mapDraft" class="hint">Nessuna modifica</span></div>
+            </div>
             <div class="fields"><label>Cerca una funzione<input id="mapSearch" type="search" placeholder="Es. volume, freccia, F5…" autocomplete="off" /></label></div>
             <div id="mapCategories" class="filter-row" aria-label="Categorie funzioni"></div>
             <div id="mapChoices" class="function-grid" aria-label="Funzioni disponibili"></div>
-            <div class="fields">
+            <div class="fields" id="mapTargetField">
               <label>Nuova funzione<select id="mapTarget"></select></label>
             </div>
-            <div class="row">
+            <div class="row" id="mapSingleActions">
               <button id="btnMapApply" class="primary" data-needs-device>Salva mappatura</button>
               <button id="btnMapCapture">Premi il tasto da assegnare</button>
               <button id="btnMapDefault" data-needs-device>Predefinito</button>
@@ -203,6 +223,7 @@
             <p class="hint warn" id="mapSocdWarn" hidden>
               Questo tasto ha il SOCD attivo: il firmware ignora il layer Fn su di esso.
             </p>
+          </div>
           </article>
         </section>
 

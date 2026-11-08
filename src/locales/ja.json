@@ -383,5 +383,21 @@
   "Invalid backup format.": "バックアップの形式が無効です。",
   "This backup belongs to a different keyboard.": "このバックアップは別のキーボードのものです。",
   "The shared buffer supports one macro sequence per profile.": "共有バッファーは1プロファイルにつき1つのマクロシーケンスに対応します。",
-  "Invalid macro event state.": "マクロイベントの状態が無効です。"
+  "Invalid macro event state.": "マクロイベントの状態が無効です。",
+  "Edit layout": "レイアウトを編集",
+  "Finish editing": "編集を終了",
+  "Drag keycaps from the pool onto the keyboard to set your layout.": "キー一覧からキーボードへドラッグしてレイアウトを設定します。",
+  "Select the Fn layer for Fn combinations. You can also select a keycap from the pool, then click its destination.": "Fnの組み合わせにはFnレイヤーを選択します。一覧のキーを選んでから配置先をクリックすることもできます。",
+  "Changes are a preview: press Save and apply to write them to the keyboard.": "変更はプレビューです。「保存して適用」でキーボードに書き込みます。",
+  "Save and apply": "保存して適用",
+  "Discard changes": "変更を破棄",
+  "Fill empty Fn slots": "空のFnキーを補完",
+  "Fn suggestions: Enter = Delete, 1–0 / − / = = F1–F12, F/G = Home/End, H/J = PgUp/PgDn. Existing assignments are preserved.": "Fn候補：Enter = Delete、1–0 / − / = = F1–F12、F/G = Home/End、H/J = PgUp/PgDn。既存の割り当ては保持されます。",
+  "Keycap pool": "キー一覧",
+  "Drag a keycap onto the keyboard above, or select it and click its destination.": "上のキーボードにキーをドラッグするか、キーを選んで配置先をクリックします。",
+  "Preview discarded: the keyboard configuration changed.": "キーボードの設定が変わったため、プレビューを破棄しました。",
+  "Save or discard changes before leaving edit mode.": "編集を終了する前に変更を保存または破棄してください。",
+  "Layout saved and verified": "レイアウトを保存し確認しました",
+  "Numeric keypad": "テンキー",
+  "Pending changes: {count}": "適用する変更：{count}件"
 }

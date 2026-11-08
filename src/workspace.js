@@ -76,7 +76,7 @@ export function initWorkspace({ aula, ui, task, toast, log, renderAll, drawKeybo
 
   // Mapping: searchable functions, category filters, physical key capture and draft feedback.
   let category = 'Tutte';
-  const aliases = { Navigazione: 'frecce arrows arrow left right up down insert delete home end pagina flechas izquierda derecha arriba abajo стрелка влево вправо вверх вниз 矢印 左 右 上 下', Media: 'volume audio musica play pause mute volumen sonido громкость звук 音量 音声', Modificatori: 'ctrl shift alt win control modificador модификатор 修飾', Controllo: 'invio spazio esc escape canc backspace enter space espacio пробел ввод スペース 改行', Funzione: 'function funzione función функция ファンクション' };
+  const aliases = { Navigazione: 'frecce arrows arrow left right up down insert delete canc home end pagina flechas izquierda derecha arriba abajo стрелка влево вправо вверх вниз 矢印 左 右 上 下', Media: 'volume audio musica play pause mute volumen sonido громкость звук 音量 音声', Modificatori: 'ctrl shift alt win control modificador модификатор 修飾', Controllo: 'invio spazio esc escape backspace enter space espacio пробел ввод スペース 改行', Funzione: 'function funzione función функция ファンクション', 'Tastierino numerico': 'numpad keypad numeric pad tastierino numerico teclado numérico цифровая клавиатура テンキー' };
   for (const group of ['Tutte', ...Object.keys(KEY_GROUPS)]) {
     const b = document.createElement('button');
     b.textContent = group;
@@ -99,9 +99,23 @@ export function initWorkspace({ aula, ui, task, toast, log, renderAll, drawKeybo
         b.textContent = name === '—' ? 'Nessuna' : name;
         b.className = 'function-key';
         b.title = group;
-        b.setAttribute('aria-pressed', $('mapTarget').value === code);
-        b.classList.toggle('active', $('mapTarget').value === code);
-        b.addEventListener('click', () => { $('mapTarget').value = code; updateMapPreview(); renderFunctions(); });
+        const active = ui.mapEditing ? ui.mapPoolCode === Number(code) : $('mapTarget').value === code;
+        b.setAttribute('aria-pressed', active);
+        b.classList.toggle('active', active);
+        b.dataset.code = code;
+        b.draggable = ui.mapEditing;
+        b.addEventListener('dragstart', e => {
+          if (!ui.mapEditing || ui.busy || !ui.connected) return e.preventDefault();
+          e.dataTransfer.setData('application/x-win60-keycode', code);
+          e.dataTransfer.effectAllowed = 'copy';
+        });
+        b.addEventListener('click', () => {
+          if (ui.busy) return;
+          if (ui.mapEditing) ui.mapPoolCode = Number(code);
+          $('mapTarget').value = code;
+          updateMapPreview(); renderFunctions();
+          $('mapChoices').querySelector(`[data-code="${code}"]`)?.focus({ preventScroll: true });
+        });
         $('mapChoices').appendChild(b);
       }
     }
@@ -117,7 +131,10 @@ export function initWorkspace({ aula, ui, task, toast, log, renderAll, drawKeybo
     $('mapTo').textContent = keyLabel(Number($('mapTarget').value));
     $('mapDraft').textContent = Number($('mapTarget').value) === mapOf(ui.layer, ui.mapKey) ? 'Nessuna modifica' : 'Modifica da salvare';
   }
-  document.addEventListener('studio:map', () => { cancelCapture(); updateMapPreview(); renderFunctions(); });
+  document.addEventListener('studio:map', () => {
+    cancelCapture(); updateMapPreview(); renderFunctions();
+    if (ui.mapEditing) $('mapSearch').focus({ preventScroll: true });
+  });
   $('mapSearch').addEventListener('input', renderFunctions);
   document.addEventListener('studio:language', renderFunctions);
   $('mapTarget').addEventListener('change', () => { updateMapPreview(); renderFunctions(); });
