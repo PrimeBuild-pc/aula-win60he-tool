@@ -1,6 +1,6 @@
 import { AulaKeyboard, BASE_LAYER, FN_LAYER, KEYCODES, RATE_LABELS } from './aula.js';
 import { CODE_TO_HID, KEY_GROUPS, KEY_LABELS, KEY_WIDTH, keyLabel, physicalLabel } from './keycodes.js';
-import { stepTrigger } from './settings.js';
+import { stepTrigger, performanceMatches } from './settings.js';
 import { initWorkspace } from './workspace.js';
 import { completeFnLayout } from './fn-layout.js';
 import { RGB_COMMANDS, RGB_DESCRIPTIONS, RGB_SUGGESTIONS } from './rgb-shortcuts.js';
@@ -28,6 +28,8 @@ const aula = new AulaKeyboard((message, level = 'info') => log(message, level));
 const ui = {
   connected: false,
   busy: false,
+  saveUnconfirmed: false,
+  applyChecks: {},
   layer: BASE_LAYER,
   mapKey: null,
   perfSel: new Set(),
@@ -85,7 +87,7 @@ function setButtons() {
   $('btnCalibrationEnd').disabled = !ui.connected || ui.busy || !ui.calibration;
   $('btnDisconnect').hidden = !ui.connected;
   $('btnDisconnect').disabled = ui.busy || ui.calibration;
-  for (const b of $('profileSeg').children) b.disabled ||= !aula.state?.config?.hasFourConfig;
+  for (const b of $('profileSeg').children) b.disabled ||= !aula.state?.config?.hasFourConfig || (!ui.saveUnconfirmed && Number(b.dataset.profile) === aula.state.config.configID);
   $('btnSystemApply').disabled ||= !aula.state?.system?.hasWinMode;
   $('btnSuperResponse').disabled ||= !aula.state?.lighting;
   $('perfMode').querySelector('[value="global"]').disabled = !aula.state?.globalPerformance;
@@ -99,12 +101,18 @@ function setButtons() {
   $('btnEntryConnect').disabled = ui.busy || !AulaKeyboard.isSupported();
   $('btnEntryConnect').querySelector('span').textContent = ui.busy ? 'Connessione e lettura…' : 'Connetti la tua tastiera';
   ui.syncPresetState?.();
+  for (const [id, matches] of Object.entries(ui.applyChecks)) {
+    const applied = ui.connected && !ui.saveUnconfirmed && matches();
+    $(id).disabled ||= applied;
+    $(id).classList.toggle('is-applied', Boolean(applied));
+  }
 }
 
 // Runs one device operation at a time; live polling is paused so responses don't interleave.
-async function task(button, fn, okMessage, { persist = false } = {}) {
+async function task(button, fn, okMessage, { persist = false, writes = persist } = {}) {
   if (ui.busy) return;
   ui.busy = true;
+  if (writes) ui.saveUnconfirmed = true;
   setButtons();
   const wasLive = ui.live;
   if (wasLive) await stopLive();
@@ -113,6 +121,7 @@ async function task(button, fn, okMessage, { persist = false } = {}) {
   try {
     await fn();
     if (persist) await aula.saveSettings();
+    if (writes) ui.saveUnconfirmed = false;
     if (okMessage) toast(okMessage);
   } catch (error) {
     ui.syncPresetState?.({ invalidate: true });
@@ -127,6 +136,11 @@ async function task(button, fn, okMessage, { persist = false } = {}) {
     if (wasLive && ui.connected && document.querySelector('.view.active')?.dataset.view === 'test' && !document.hidden) startLive();
   }
 }
+
+// Recompute on edits as well as after device operations; reverting a draft needs no write.
+document.addEventListener('input', () => setButtons());
+document.addEventListener('change', () => setButtons());
+document.addEventListener('click', () => setButtons());
 
 function physicalRows() {
   const physical = aula.state?.physical;
@@ -381,7 +395,7 @@ $('btnMapSaveLayout').addEventListener('click', () => {
     } finally {
       renderAll();
     }
-  }, 'Layout salvato e verificato');
+  }, 'Layout salvato e verificato', { writes: true });
 });
 addEventListener('beforeunload', e => {
   if (ui.mapDrafts.some(draft => draft.size)) { e.preventDefault(); e.returnValue = ''; }
@@ -457,21 +471,20 @@ function afterSelection() {
   renderPerf();
   if (ui.perfSel.size === 1 && ui.connected) {
     const [k] = ui.perfSel;
-    task(null, async () => {
-      const p = await aula.readKeyPerf(k);
-      $('perfMode').value = p.touchMode;
-      const set = (id, v) => {
-        $(id).value = v;
-        $(id).dispatchEvent(new Event('input'));
-      };
-      set('perfAct', p.touchMode === 'global' ? aula.state.globalPerformance?.globalTouchTravel ?? p.actuation : p.actuation);
-      set('perfRtp', p.rtPress);
-      set('perfRtr', p.rtRelease);
-      set('perfDp', p.pressDead);
-      set('perfDr', p.releaseDead);
-      $('perfReadout').textContent = `${physicalLabel(k)}: ${p.touchMode === 'rt' ? 'Rapid Trigger' : p.touchMode}, attuazione ${p.actuation} mm, RT ${p.rtPress}/${p.rtRelease} mm.`;
-    });
+    const p = perfOf(k);
+    $('perfMode').value = p.touchMode;
+    const set = (id, v) => {
+      $(id).value = v;
+      $(id).dispatchEvent(new Event('input'));
+    };
+    set('perfAct', p.touchMode === 'global' ? aula.state.globalPerformance?.globalTouchTravel ?? p.actuation : p.actuation);
+    set('perfRtp', p.rtPress);
+    set('perfRtr', p.rtRelease);
+    set('perfDp', p.touchMode === 'global' ? aula.state.globalPerformance?.pressDead ?? p.pressDead : p.pressDead);
+    set('perfDr', p.touchMode === 'global' ? aula.state.globalPerformance?.releaseDead ?? p.releaseDead : p.releaseDead);
+    $('perfReadout').textContent = `${physicalLabel(k)}: ${p.touchMode === 'rt' ? 'Rapid Trigger' : p.touchMode}, attuazione ${p.actuation} mm, RT ${p.rtPress}/${p.rtRelease} mm.`;
   }
+  setButtons();
 }
 
 document.querySelectorAll('[data-select]').forEach((b) =>
@@ -506,6 +519,14 @@ $('btnPerfApply').addEventListener('click', () => {
     }
   }, `Salvato su ${keys.length} tasti`, { persist: true });
 });
+
+ui.applyChecks.btnPerfApply = () => ui.perfSel.size === 0 || [...ui.perfSel].every(key => performanceMatches(perfOf(key), {
+  touchMode: $('perfMode').value, actuation: Number($('perfAct').value), rtPress: Number($('perfRtp').value),
+  rtRelease: Number($('perfRtr').value), pressDead: Number($('perfDp').value), releaseDead: Number($('perfDr').value),
+}, aula.state?.globalPerformance));
+ui.applyChecks.btnMapApply = () => ui.mapKey == null || Number($('mapTarget').value) === mapOf(ui.layer, ui.mapKey);
+ui.applyChecks.btnSocdApply = () => aula.state?.socd?.some(p => p.pos1 === ui.socdPair[0] && p.pos2 === ui.socdPair[1] && p.mode === ui.socdMode);
+ui.applyChecks.btnSocdRemove = () => !aula.state?.socd?.some(p => p.pos1 === ui.socdPair[0] && p.pos2 === ui.socdPair[1]);
 
 function drawDiagram() {
   const act = Number($('perfAct').value);

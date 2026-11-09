@@ -1,5 +1,6 @@
 import { KEY_GROUPS, keyLabel, physicalLabel, CODE_TO_HID } from './keycodes.js';
-import { DEFAULT_LIGHT, LIGHT_EFFECTS, rgbFromHex } from './settings.js';
+import { DEFAULT_LIGHT, LIGHT_EFFECTS, rgbFromHex, lightingMatches } from './settings.js';
+import { ADVANCED_MODES, advancedRegisters } from './advanced.js';
 import { initLanguage, translate } from './i18n.js';
 import { initAdvancedEditor } from './advanced-ui.js';
 import { RGB_DESCRIPTIONS } from './rgb-shortcuts.js';
@@ -78,7 +79,7 @@ export function initWorkspace({ aula, ui, task, toast, log, renderAll, renderKey
     renderAll();
   }));
   $('btnRefresh').addEventListener('click', () => task($('btnRefresh'), refresh, 'Stato aggiornato'));
-  $('btnSaveSettings').addEventListener('click', () => task($('btnSaveSettings'), () => aula.saveSettings(), 'Salvataggio memoria confermato'));
+  $('btnSaveSettings').addEventListener('click', () => task($('btnSaveSettings'), () => aula.saveSettings(), 'Salvataggio memoria confermato', { writes: true }));
   $('btnSystemApply').addEventListener('click', () => task($('btnSystemApply'), async () => { await aula.switchSystem($('deviceSystem').value); renderDevice(); }, 'Modalità sistema verificata', { persist: true }));
   $('btnSuperResponse').addEventListener('click', () => task($('btnSuperResponse'), async () => {
     const light = await aula.readLighting();
@@ -187,6 +188,14 @@ export function initWorkspace({ aula, ui, task, toast, log, renderAll, renderKey
   let selected = new Set();
   let custom = new Map();
   let dirty = false;
+  ui.applyChecks.btnRgbApply = () => {
+    dirty = !lightingMatches(aula.state?.lighting, light, aula.state?.customLighting, [...custom.values()]);
+    $('rgbReadout').textContent = dirty || ui.saveUnconfirmed ? 'Bozza locale · premi Applica per salvare.' : light.open ? 'Configurazione letta dalla tastiera.' : 'RGB spento sulla tastiera.';
+    return !dirty;
+  };
+  ui.applyChecks.btnRgbOff = () => aula.state?.lighting?.open === false;
+  ui.applyChecks.btnSystemApply = () => $('deviceSystem').value === aula.state?.system?.currentSystem;
+  ui.applyChecks.btnSuperResponse = () => $('deviceSuperResponse').checked === aula.state?.lighting?.superResponse;
   for (let i = 1; i <= 20; i++) {
     const o = document.createElement('option');
     o.value = i; o.textContent = `${LIGHT_EFFECTS[i - 1]} · ${i}`;
@@ -231,6 +240,7 @@ export function initWorkspace({ aula, ui, task, toast, log, renderAll, renderKey
       key.style.setProperty('--rgb-opacity', light.open ? light.luminance / 4 : 0);
       key.classList.add('rgb-key');
     }
+    setButtons();
   }
   for (const id of ['rgbMode', 'rgbBrightness', 'rgbSpeed', 'rgbDirection']) $(id).addEventListener('input', () => {
     light.mode = Number($('rgbMode').value);
@@ -311,13 +321,35 @@ export function initWorkspace({ aula, ui, task, toast, log, renderAll, renderKey
 
   let advancedKey = null;
   const advancedEditor = initAdvancedEditor({ ui, toast });
+  const savedAdvanced = () => aula.state?.advanced?.find(p => p.key === advancedKey);
+  function loadAdvanced() {
+    const stored = savedAdvanced();
+    const macro = aula.state?.macros?.find(p => p.key === advancedKey);
+    if (stored || macro) advancedEditor.load(stored, macro);
+  }
   function renderAdvanced() {
     drawKeyboard($('kbdAdvanced'), {
       label: k => ({ main: physicalLabel(k), sub: aula.state?.performances.find(p => p.keyValue === k)?.advancedKeyMode ? 'ADV' : '' }),
       classes: k => k === advancedKey ? 'is-selected' : '',
-      onClick: k => { advancedKey = k; $('advancedTitle').textContent = `Tasto ${physicalLabel(k)}`; renderAdvanced(); },
+      onClick: k => { if (ui.busy) return; advancedKey = k; $('advancedTitle').textContent = `Tasto ${physicalLabel(k)}`; loadAdvanced(); renderAdvanced(); setButtons(); },
     });
   }
+  ui.applyChecks.btnAdvancedApply = () => {
+    if (advancedKey == null) return true;
+    const type = $('advancedMode').value, stored = savedAdvanced();
+    if (type === 'macro') {
+      const macro = aula.state?.macros?.find(p => p.key === advancedKey);
+      return Boolean(macro && JSON.stringify(advancedEditor.macroDraft()) === JSON.stringify({ events: macro.events, options: { mode: macro.params.mode, num: macro.params.num, delay: macro.params.delay } }));
+    }
+    if (stored?.mode !== ADVANCED_MODES[type]) return false;
+    const config = advancedEditor.config();
+    try {
+      const expected = type === 'end' ? [{ layout: 9, value: config.first }, { layout: 19, value: config.delay }] :
+        type === 'rs' ? [{ layout: 32, value: config.first }] : advancedRegisters(type, type === 'mt' ? { ...config, third: 0, fourth: 0 } : config);
+      return expected.every(v => stored.values.some(s => s.layout === v.layout && s.value === v.value));
+    } catch { return false; }
+  };
+  ui.applyChecks.btnAdvancedRemove = () => advancedKey == null || !aula.state?.performances?.find(p => p.keyValue === advancedKey)?.advancedKeyMode;
   document.addEventListener('click', e => {
     if (e.target.closest('.seg')) queueMicrotask(() => {
       document.querySelectorAll('.seg button').forEach(b => b.setAttribute('aria-pressed', b.classList.contains('active')));
@@ -354,7 +386,9 @@ export function initWorkspace({ aula, ui, task, toast, log, renderAll, renderKey
     $('socdSecond').textContent = keyLabel(ui.socdPair[1]);
     $('socdReadout').textContent = s ? (s.socd?.length ? `Coppie attive: ${s.socd.map(p => `${keyLabel(p.pos1)}/${keyLabel(p.pos2)}`).join(', ')}` : 'Nessuna coppia SOCD attiva.') : 'Collega la tastiera per leggere le coppie attive.';
   }
+  let deviceSource;
   document.addEventListener('studio:render', () => {
+    if (aula.state !== deviceSource) { deviceSource = aula.state; loadAdvanced(); }
     if (aula.state?.lighting && aula.state.lighting !== lightSource) {
       light = structuredClone(aula.state.lighting); lightSource = aula.state.lighting;
       custom = new Map((aula.state.customLighting || []).map(c => [c.key, c]));

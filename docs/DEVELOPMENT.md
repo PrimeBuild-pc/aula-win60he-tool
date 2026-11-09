@@ -115,6 +115,8 @@ Capture reads the current profile's four layers, per-key performance registers, 
 
 Browser regression tests separately model volatile working memory and saved state. Their power-cycle operation discards unsaved values. Tests exercise settings through the production app/SDK, then compare retained mappings, performance, SOCD, lighting, global values, advanced/macro metadata, system and profile selection. These emulated tests supplement the physical check; they do not replace it.
 
+Connection diagnosis batches reads of all per-key performance thresholds and reads supported active advanced registers. Apply state compares drafts with that readback, rather than session-only success flags. Preset recognition checks all affected thresholds, modes, SOCD policy and polling; unrelated mappings and RGB do not invalidate it. A failed write/save leaves the session unconfirmed until a successful persistent save. Browser tests also reopen the entire page with the emulator's flash snapshot retained independently of application state, and verify that changed device values cannot restore a stale preset confirmation.
+
 
 ## USB command and polling recovery
 

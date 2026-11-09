@@ -1,4 +1,4 @@
-import { DKS_PHASES, validateMacro } from './advanced.js';
+import { ADVANCED_MODES, DKS_PHASES, validateMacro } from './advanced.js';
 import { CODE_TO_HID, keyLabel } from './keycodes.js';
 
 const $ = id => document.getElementById(id);
@@ -125,7 +125,33 @@ export function initAdvancedEditor({ ui, toast }) {
     renderTimeline();
   });
   $('advancedMode').dispatchEvent(new Event('change')); renderEvents();
+  const macroDraft = () => ({ events: structuredClone(events), options: { mode: Number($('macroPlayback').value), num: Number($('macroRepeats').value), delay: Number($('macroRepeatDelay').value) } });
   return {
+    macroDraft,
+    load: (stored, macro) => {
+      stopRecording();
+      const type = macro ? 'macro' : Object.keys(ADVANCED_MODES).find(type => ADVANCED_MODES[type] === stored.mode);
+      $('advancedMode').value = type;
+      if (macro) {
+        events = structuredClone(macro.events);
+        $('macroPlayback').value = macro.params.mode; $('macroRepeats').value = macro.params.num; $('macroRepeatDelay').value = macro.params.delay;
+        renderEvents();
+      } else {
+        const values = new Map(stored.values.map(v => [v.layout, v.value]));
+        const put = (id, value) => {
+          if (value == null) return;
+          if ($(id).tagName === 'SELECT' && ![...$(id).options].some(o => Number(o.value) === value)) $(id).add(new Option(keyLabel(value), value));
+          $(id).value = value;
+        };
+        ['advancedFirst', 'advancedSecond', 'advancedThird', 'advancedFourth'].forEach((id, i) => put(id, values.get(type === 'rs' ? 32 : 9 + i)));
+        if (values.has(19)) put('advancedDelay', values.get(19) * (type === 'end' ? 1 : 10));
+        put('advancedFirstTravel', values.has(5) ? values.get(5) / 1000 : null);
+        put('advancedTravel', values.has(type === 'mpt' ? 6 : 7) ? values.get(type === 'mpt' ? 6 : 7) / 1000 : null);
+        if (type === 'mpt') put('advancedThirdTravel', values.get(7) / 1000);
+        if (type === 'dks') masks = [13, 14, 15, 16].map(layout => values.get(layout));
+      }
+      $('advancedMode').dispatchEvent(new Event('change'));
+    },
     config: () => ({ first: Number($('advancedFirst').value), second: Number($('advancedSecond').value), third: Number($('advancedThird').value), fourth: Number($('advancedFourth').value), delay: Number($('advancedDelay').value), firstTravel: Number($('advancedFirstTravel').value), travel: Number($('advancedTravel').value), thirdTravel: Number($('advancedThirdTravel').value), masks: [...masks] }),
     macro: () => { stopRecording(); return { events: validateMacro(events), options: { mode: Number($('macroPlayback').value), num: Number($('macroRepeats').value), delay: Number($('macroRepeatDelay').value) } }; },
   };

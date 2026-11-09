@@ -6,6 +6,26 @@ export const DEFAULT_LIGHT = {
   staticColor: 0, dynamicColorId: 7, direction: false, superResponse: false, sleepDelay: 0,
 };
 
+// Compare only registers written by the selected performance mode.
+export function performanceMatches(stored, draft, global) {
+  if (!stored || stored.touchMode !== draft.touchMode) return false;
+  const values = draft.touchMode === 'global' ? { actuation: global?.globalTouchTravel, ...global } : stored;
+  const fields = ['actuation', 'pressDead', 'releaseDead', ...(draft.touchMode === 'rt' ? ['rtPress', 'rtRelease'] : [])];
+  return fields.every(field => Number.isFinite(values[field]) && Math.abs(values[field] - draft[field]) < 0.0005);
+}
+
+export function lightingMatches(stored, draft, storedColors = [], colors = []) {
+  if (!stored) return false;
+  const normalize = light => ({ ...light, staticColor: light.type === 'dynamic' ? 0 : light.staticColor,
+    colors: light.colors.map(color => color.toLowerCase()) });
+  const a = normalize(stored), b = normalize(draft);
+  return Object.keys(b).every(field => JSON.stringify(a[field]) === JSON.stringify(b[field])) &&
+    (draft.type !== 'custom' || colors.every(color => {
+      const saved = storedColors.find(c => c.key === color.key);
+      return saved && ['r', 'g', 'b'].every(channel => saved[channel] === color[channel]);
+    }));
+}
+
 export function range(value, min, max, name, integer = false) {
   if (typeof value !== 'number' || !Number.isFinite(value) || value < min || value > max || (integer && !Number.isInteger(value))) {
     throw new Error(`${name}: valore non valido (${min}–${max}).`);

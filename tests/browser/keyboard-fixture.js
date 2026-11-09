@@ -15,9 +15,8 @@ export async function installKeyboard(page, { hardware = false, rateIndex = 0 } 
     const model = { light, registers, colors, trace, ledBrightness: 4, commitCount: 0, saveCount: 0, saveFailure: false, rateWriteCount: 0, permissionRequests: 0 };
     const snapshot = () => structuredClone({ registers: [...registers], colors: [...colors], pairs: [...pairs], macros: [...macros],
       light: [...light], globalValues: [...globalValues], profile, rate, system });
-    let saved = snapshot();
-    model.snapshot = snapshot;
-    model.powerCycle = () => {
+    let saved = JSON.parse(sessionStorage.getItem('keyboard-fixture-flash') || 'null') || snapshot();
+    const restore = () => {
       for (const [map, values] of [[registers, saved.registers], [colors, saved.colors], [pairs, saved.pairs], [macros, saved.macros]]) {
         map.clear(); for (const [key, value] of structuredClone(values)) map.set(key, value);
       }
@@ -25,6 +24,11 @@ export async function installKeyboard(page, { hardware = false, rateIndex = 0 } 
       globalValues.splice(0, globalValues.length, ...saved.globalValues);
       ({ profile, rate, system } = saved);
       model.ledBrightness = light[37] & 1 ? light[38] : 0;
+    };
+    restore();
+    model.snapshot = snapshot;
+    model.powerCycle = () => {
+      restore();
       model.disconnect();
     };
     window.__keyboardFixture = model;
@@ -60,7 +64,7 @@ export async function installKeyboard(page, { hardware = false, rateIndex = 0 } 
           const op = data[0];
           if (op === 2) {
             if (model.saveFailure) payload = Uint8Array.from([0, 2, 0, 0]);
-            else { saved = snapshot(); model.saveCount++; payload = Uint8Array.from([0, 2, 255, 255]); }
+            else { saved = snapshot(); sessionStorage.setItem('keyboard-fixture-flash', JSON.stringify(saved)); model.saveCount++; payload = Uint8Array.from([0, 2, 255, 255]); }
           }
           else if (op === 1) payload = Uint8Array.from([0, 1, 9, 1]);
           else if (op === 38) payload = Uint8Array.from([0, 38, ...new TextEncoder().encode('WIN 60 HE MAX')]);

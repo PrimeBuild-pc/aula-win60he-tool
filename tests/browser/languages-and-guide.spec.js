@@ -30,7 +30,7 @@ for (const language of locales) test(`${language.code}: browser detection, trans
   await page.locator('#rgbHex').fill('#aabbcc'); await page.locator('#rgbHex').press('Tab');
   await page.locator('#btnRgbApply').click();
   await expect(page.locator('#toast')).toHaveText(language.saved);
-  await expect(page.locator('#btnRgbApply')).toBeEnabled();
+  await expect(page.locator('#btnRgbApply')).toBeDisabled();
   expect(await page.evaluate(() => window.__keyboardFixture.ledBrightness)).toBe(4);
   const names = await page.locator('#languageSelect option').allTextContents();
   expect(names).toEqual(['Italiano', 'English', 'Русский', 'Español', '日本語']);

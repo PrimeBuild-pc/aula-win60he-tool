@@ -344,6 +344,14 @@ export class AulaKeyboard {
       if (!Number.isInteger(value)) throw new Error('Modalità tasto non leggibile.');
       return { ...pos, touchMode: ['global', 'single', 'rt'][value >> 4] ?? 'single', advancedKeyMode: value & 15 };
     });
+    for (const [field, layout] of Object.entries({ actuation: 4, rtPress: 20, rtRelease: 21, pressDead: 22, releaseDead: 23 })) {
+      const values = await this.readRegisters(physical.map(p => ({ key: p.keyValue, layout })));
+      for (const p of performances) {
+        const value = values.find(v => v.key === p.keyValue)?.value;
+        if (!Number.isInteger(value) || value === 65535) throw new Error(`Lettura ${field} incompleta.`);
+        p[field] = value / 1000;
+      }
+    }
     const baseInfo = await this.safe('Informazioni firmware', () => this.kb.getBaseInfo());
     if (baseInfo && typeof baseInfo === 'object') Object.assign(info, baseInfo);
     const config = await this.safe('Profilo hardware', () => this.kb.getApi({ type: 'ORDER_TYPE_CONFIG' }));
@@ -368,8 +376,11 @@ export class AulaKeyboard {
       rtCount,
       socdCount,
       config: config?.hasFourConfig && Number.isInteger(config.configID) && config.configID >= 0 && config.configID <= 3 ? config : null,
-      socd: [], lighting: null, customLighting: [],
+      socd: [], lighting: null, customLighting: [], advanced: [],
     };
+    for (const p of performances) if ([1, 2, 3, 4, 5, 9].includes(p.advancedKeyMode)) {
+      this.state.advanced.push(await this.readAdvanced(p.keyValue, p.advancedKeyMode));
+    }
     this.state.macros = [];
     try {
       const cached = JSON.parse(localStorage.getItem(`studio-macro-${config?.configID ?? 0}`) || '[]');

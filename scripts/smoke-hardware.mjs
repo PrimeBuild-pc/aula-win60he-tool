@@ -6,7 +6,7 @@ import { AulaKeyboard } from '../src/aula.js';
 import { installKeyboard, connectKeyboard } from '../tests/browser/keyboard-fixture.js';
 import { createHidTransport } from './hardware-transport.mjs';
 
-const transport = createHidTransport();
+const transport = createHidTransport({ allowSave: true });
 const driver = new AulaKeyboard();
 driver.kb = new Keyboard({ configs: [], usage: 1, usagePage: 0xffa0 });
 driver.state = { protocolVersion: '1.0.9' };
@@ -32,7 +32,7 @@ try {
   await page.locator('#rgbHex').fill('#17dba0'); await page.locator('#rgbHex').press('Tab');
   await page.locator('#btnRgbApply').click();
   await page.locator('#btnRgbApply').waitFor({ state: 'visible' });
-  await page.waitForFunction(() => document.querySelector('#btnRgbApply').disabled === false);
+  await page.waitForFunction(() => document.querySelector('#btnRgbApply').classList.contains('is-applied'));
   const toast = await page.locator('#toast').innerText();
   assert.match(toast, /RGB salvati/);
   const actual = await driver.readLighting();
@@ -41,6 +41,6 @@ try {
   await setTimeout(10000);
 } finally {
   if (browser) await browser.close();
-  if (original) { await driver.writeLighting(original); console.log('ORIGINAL_RGB_RESTORED'); }
+  if (original) { await driver.writeLighting(original); await driver.saveSettings(); console.log('ORIGINAL_RGB_RESTORED'); }
   transport.close();
 }

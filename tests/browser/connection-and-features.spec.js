@@ -48,7 +48,7 @@ test('RGB brightness and palette indices match firmware, including rainbow', asy
   await page.locator('#btnRgbApply').click(); await expect(page.locator('#toast')).toContainText('RGB salvati');
   expect(await page.evaluate(() => ({ level: window.__keyboardFixture.ledBrightness, color: window.__keyboardFixture.light[42] }))).toEqual({ level: 1, color: 0 });
   await page.getByRole('button', { name: 'Arcobaleno', exact: true }).click();
-  await page.locator('#btnRgbApply').click(); await expect(page.locator('#btnRgbApply')).toBeEnabled();
+  await page.locator('#btnRgbApply').click(); await expect(page.locator('#btnRgbApply')).toHaveClass(/is-applied/);
   expect(await page.evaluate(() => window.__keyboardFixture.light[42])).toBe(7);
 });
 
@@ -57,7 +57,7 @@ test('choosing an effect from zero brightness turns it on and preserves dynamic 
   await page.locator('#rgbBrightness').press('Home');
   await page.locator('#rgbMode').selectOption('3');
   await page.locator('#rgbPalette button').nth(3).click();
-  await page.locator('#btnRgbApply').click(); await expect(page.locator('#btnRgbApply')).toBeEnabled();
+  await page.locator('#btnRgbApply').click(); await expect(page.locator('#btnRgbApply')).toHaveClass(/is-applied/);
   await expect(page.locator('#toast')).toContainText('RGB salvati');
   expect(await page.evaluate(() => [38, 39, 42, 43].map(i => window.__keyboardFixture.light[i]))).toEqual([4, 3, 0, 3]);
   await expect(page.locator('#rgbPalette button').nth(3)).toHaveAttribute('aria-pressed', 'true');
@@ -69,10 +69,10 @@ test('MPT writes three ordered points and END writes release behavior', async ({
   await page.locator('[data-advanced-mode="mpt"]').click();
   await expect(page.locator('#advancedThirdLabel')).toBeVisible();
   await page.locator('#advancedThird').selectOption('7');
-  await page.locator('#btnAdvancedApply').click(); await expect(page.locator('#btnAdvancedApply')).toBeEnabled(); await expect(page.locator('#toast')).toContainText('Configurazione assegnata');
+  await page.locator('#btnAdvancedApply').click(); await expect(page.locator('#btnAdvancedApply')).toHaveClass(/is-applied/); await expect(page.locator('#toast')).toContainText('Configurazione assegnata');
   expect(await page.evaluate(() => [5, 6, 7, 8].map(i => window.__keyboardFixture.registers.get(`4:${i}`)))).toEqual([500, 2000, 3000, 34]);
   await page.locator('[data-advanced-mode="end"]').click();
-  await page.locator('#btnAdvancedApply').click(); await expect(page.locator('#btnAdvancedApply')).toBeEnabled(); await expect(page.locator('#toast')).toContainText('Configurazione assegnata');
+  await page.locator('#btnAdvancedApply').click(); await expect(page.locator('#btnAdvancedApply')).toHaveClass(/is-applied/); await expect(page.locator('#toast')).toContainText('Configurazione assegnata');
   expect(await page.evaluate(() => window.__keyboardFixture.registers.get('4:8') & 15)).toBe(5);
 });
 
@@ -97,7 +97,7 @@ test('macro recording, export and binding are functional', async ({ page }) => {
   expect((await download).suggestedFilename()).toBe('win60-macro.json');
   await page.locator('#btnAdvancedApply').click(); await expect(page.locator('#toast')).toContainText('Configurazione assegnata');
   expect(await page.evaluate(() => window.__keyboardFixture.registers.get('4:8') & 15)).toBe(6);
-  await expect(page.locator('#btnAdvancedApply')).toBeEnabled();
+  await expect(page.locator('#btnAdvancedApply')).toBeDisabled();
   await page.locator('#nav [data-view="backup"]').click();
   const backupDownload = page.waitForEvent('download'); await page.locator('#btnBackup').click();
   const backup = JSON.parse(await readFile(await (await backupDownload).path(), 'utf8'));
@@ -111,9 +111,9 @@ test('macro recording, export and binding are functional', async ({ page }) => {
 test('global actuation and system mode save through firmware commands', async ({ page }) => {
   await connectKeyboard(page); await page.locator('#nav [data-view="perf"]').click();
   await page.locator('[data-select="wasd"]').click(); await page.locator('#perfMode').selectOption('global');
-  await page.locator('#btnPerfApply').click(); await expect(page.locator('#btnPerfApply')).toBeEnabled();
+  await page.locator('#btnPerfApply').click(); await expect(page.locator('#btnPerfApply')).toHaveClass(/is-applied/);
   await expect(page.locator('#toast')).toContainText('Salvato');
   expect(await page.evaluate(() => window.__keyboardFixture.registers.get('4:8'))).toBe(0);
   await page.locator('#nav [data-view="settings"]').click(); await page.locator('#deviceSystem').selectOption('mac');
-  await page.locator('#btnSystemApply').click(); await expect(page.locator('#btnSystemApply')).toBeEnabled(); await expect(page.locator('#toast')).toContainText('sistema verificata');
+  await page.locator('#btnSystemApply').click(); await expect(page.locator('#btnSystemApply')).toHaveClass(/is-applied/); await expect(page.locator('#toast')).toContainText('sistema verificata');
 });

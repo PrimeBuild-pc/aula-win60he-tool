@@ -28,6 +28,8 @@ Loading a file validates it before Restore becomes available. Restore changes th
 
 If the save response is missing or unexpected, the app reports failure. Layout drafts are cleared only after the save command is acknowledged, so you can retry. **Device settings → Save keyboard memory** retries saving settings already applied to the keyboard. Unsaved on-screen edits must still be applied through their editor.
 
+Apply buttons become gray and disabled after a successful save. They become available when the draft differs from the device settings; reverting the edit disables them again without another write. On reconnect, including after reopening the page or restarting the computer, Studio reads the keyboard configuration and recognizes matching game presets, polling, performance thresholds, mappings, RGB, SOCD and device settings. Select a key to inspect its performance or advanced action. A preset is confirmed only when its affected values and SOCD policy match the device; a remembered browser selection alone cannot confirm it. Failed saves remain retryable.
+
 A disconnect/reconnect in the browser only reopens the USB interface; it does not establish that settings survive power loss. A real persistence check removes the keyboard's USB power, reconnects it and compares the read-back configuration with a pre-unplug snapshot. See the [hardware procedure](DEVELOPMENT.md#power-loss-persistence-check). Only configurations actually compared across that cycle are physically verified. Macro event bytes and calibration extrema remain outside the readback supported by this test.
 
 ## Map keys and the Fn layer

@@ -1,4 +1,4 @@
-import { validatePerformance } from './settings.js';
+import { validatePerformance, performanceMatches } from './settings.js';
 
 const movement = [26, 4, 22, 7];
 const actions = [20, 8, 21, 9, 6, 25, 27, 224, 225, 44];
@@ -33,4 +33,17 @@ export function gamePresetPlan(id, physicalKeys) {
   for (const g of groups) validatePerformance(g.values);
   if (!groups.length) throw new Error('Nessun tasto compatibile con il preset.');
   return { ...preset, groups, keys: groups.flatMap(g => g.keys) };
+}
+
+export function matchesGamePreset(state, id, rateIndex) {
+  if (!state?.physical?.length || state.rateIndex !== rateIndex) return false;
+  const plan = gamePresetPlan(id, state.physical.map(p => p.keyValue));
+  return plan.groups.every(group => group.keys.every(key => {
+    const stored = state.performances.find(p => p.keyValue === key);
+    const advanced = plan.socdMode != null && [4, 7].includes(key) ? 8 : 0;
+    return stored?.advancedKeyMode === advanced && performanceMatches(stored, group.values);
+  })) && [[4, 7], [26, 22]].every(([a, b]) => {
+    const pair = state.socd?.find(p => p.pos1 === a || p.pos2 === a);
+    return a === 4 && plan.socdMode != null ? pair?.pos1 === a && pair.pos2 === b && pair.mode === plan.socdMode : !pair;
+  });
 }

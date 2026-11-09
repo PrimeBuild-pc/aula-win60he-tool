@@ -219,7 +219,7 @@ input[type="range"] { width: 100%; accent-color: var(--accent); }
 .preset-feedback.is-error { color: var(--danger); }
 #presetAppliedIcon { line-height: 0; }
 #presetAppliedHint { margin: 10px 0 0; }
-#btnGamePresetApply.is-applied:disabled { opacity: 1; background: var(--panel-2); border-color: var(--ok); color: var(--ok); }
+button.is-applied:disabled { opacity: 1; background: var(--panel-2); border-color: var(--border); color: var(--muted); }
 .key.is-down { transform: translateY(2px); border-bottom-width: 2px; background: var(--accent); color: var(--accent-ink); }
 
 /* ---------- live test ---------- */
