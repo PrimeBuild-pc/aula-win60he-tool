@@ -3,6 +3,7 @@ import { range, validatePerformance, validateLight, validateBackup } from './set
 import { ADVANCED_MODES, advancedRegisters, validateMacro } from './advanced.js';
 import { gamePresetPlan } from './game-presets.js';
 import { guardUsbQueue } from './usb-queue.js';
+import { validateProfileShortcuts } from './profiles.js';
 
 const VENDOR_ID = 0x1ca2;
 const PRODUCT_ID = 0x1902;
@@ -746,6 +747,34 @@ export class AulaKeyboard {
     await this.checked('Cambio profilo', () => this.kb.switchConfig(index));
     const check = await this.checked('Verifica profilo', () => this.kb.getApi({ type: 'ORDER_TYPE_CONFIG' }));
     if (check.configID !== index) throw new Error('Profilo non verificato: riconnetti la tastiera.');
+    this.state.config = check;
+  }
+
+  async installProfileShortcuts(bindings) {
+    if (!this.state?.config?.hasFourConfig) throw new Error('Profili hardware non supportati.');
+    validateProfileShortcuts(bindings, this.state.physical);
+    const original = this.state.config.configID;
+    // Preflight every slot before replacing any mapping; advanced modes can swallow Fn actions.
+    try {
+      await this.saveSettings();
+      for (let index = 0; index < 4; index++) {
+        await this.switchProfile(index);
+        const base = this.layerMap(await this.readLayer(BASE_LAYER));
+        for (const b of bindings) {
+          if ([0xf001, 0xf002, 0xf003, ...Object.values(KEYCODES).filter(v => v >= 0xf100)].includes(base.get(b.key))) throw new Error('Il tasto Fn deve restare accessibile.');
+          if ((await this.readKeyPerf(b.key)).advancedKeyMode) throw new Error('Rimuovi prima le azioni avanzate dai tasti scelti in tutti i profili.');
+        }
+      }
+      for (let index = 0; index < 4; index++) {
+        await this.switchProfile(index);
+        for (const b of bindings) await this.setMapping(b.layout, b.key, b.value);
+        await this.saveSettings();
+      }
+    } finally {
+      await this.switchProfile(original);
+      await this.saveSettings();
+      await this.diagnose();
+    }
   }
 
   async readAdvanced(key, mode) {

@@ -16,17 +16,30 @@ export async function installKeyboard(page, { hardware = false, rateIndex = 0 } 
     const snapshot = () => structuredClone({ registers: [...registers], colors: [...colors], pairs: [...pairs], macros: [...macros],
       light: [...light], globalValues: [...globalValues], profile, rate, system });
     let saved = JSON.parse(sessionStorage.getItem('keyboard-fixture-flash') || 'null') || snapshot();
-    const restore = () => {
-      for (const [map, values] of [[registers, saved.registers], [colors, saved.colors], [pairs, saved.pairs], [macros, saved.macros]]) {
+    const baseline = snapshot();
+    let savedSlots = JSON.parse(sessionStorage.getItem('keyboard-fixture-slots') || 'null') || {};
+    let slots = structuredClone(savedSlots);
+    const loadState = state => {
+      for (const [map, values] of [[registers, state.registers], [colors, state.colors], [pairs, state.pairs], [macros, state.macros]]) {
         map.clear(); for (const [key, value] of structuredClone(values)) map.set(key, value);
       }
-      light.set(saved.light); staged.clear();
-      globalValues.splice(0, globalValues.length, ...saved.globalValues);
-      ({ profile, rate, system } = saved);
+      light.set(state.light); staged.clear();
+      globalValues.splice(0, globalValues.length, ...state.globalValues);
+      ({ profile, rate, system } = state);
       model.ledBrightness = light[37] & 1 ? light[38] : 0;
+    };
+    const restore = () => { slots = structuredClone(savedSlots); loadState(saved); };
+    const selectProfile = target => {
+      slots[profile] = snapshot();
+      loadState(slots[target] || { ...structuredClone(baseline), profile: target });
     };
     restore();
     model.snapshot = snapshot;
+    model.selectProfile = selectProfile;
+    model.pressProfileKey = (key, layout = 1) => {
+      const target = [0xf108, 0xf109, 0xf10a, 0xf10c].indexOf(registers.get(`${key}:${layout}`));
+      if (target >= 0) selectProfile(target);
+    };
     model.powerCycle = () => {
       restore();
       model.disconnect();
@@ -64,7 +77,7 @@ export async function installKeyboard(page, { hardware = false, rateIndex = 0 } 
           const op = data[0];
           if (op === 2) {
             if (model.saveFailure) payload = Uint8Array.from([0, 2, 0, 0]);
-            else { saved = snapshot(); sessionStorage.setItem('keyboard-fixture-flash', JSON.stringify(saved)); model.saveCount++; payload = Uint8Array.from([0, 2, 255, 255]); }
+            else { saved = snapshot(); savedSlots[profile] = saved; sessionStorage.setItem('keyboard-fixture-flash', JSON.stringify(saved)); sessionStorage.setItem('keyboard-fixture-slots', JSON.stringify(savedSlots)); model.saveCount++; payload = Uint8Array.from([0, 2, 255, 255]); }
           }
           else if (op === 1) payload = Uint8Array.from([0, 1, 9, 1]);
           else if (op === 38) payload = Uint8Array.from([0, 38, ...new TextEncoder().encode('WIN 60 HE MAX')]);
@@ -80,7 +93,10 @@ export async function installKeyboard(page, { hardware = false, rateIndex = 0 } 
             }
             payload = Uint8Array.from([0, op, rate]);
           }
-          else if (op === 112) { if (data[1] !== 255) profile = data[1]; payload = Uint8Array.from([0, op, profile]); }
+          else if (op === 112) {
+            if (data[1] !== 255 && !model.profileSwitchFailure) selectProfile(data[1]);
+            payload = Uint8Array.from([0, op, model.profileUnsupported ? 255 : profile]);
+          }
           else if (op === 33) payload = Uint8Array.from([0, op, system === 'win' ? 1 : 0]);
           else if (op === 48 || op === 49) { system = op === 48 ? 'win' : 'mac'; payload = Uint8Array.from([0, op, 1]); }
           else payload = Uint8Array.from([0, op, 1]);

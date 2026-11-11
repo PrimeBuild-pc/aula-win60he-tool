@@ -20,6 +20,7 @@ Open `http://127.0.0.1:5199/` in a desktop WebHID browser. `npm run preview` ser
 | `src/aula.js` | Connection, SDK/protocol boundary, device reads/writes and readback validation |
 | `src/main.js` | Core UI, performance, SOCD, tester, backup and operation serialization |
 | `src/workspace.js` | Navigation, theme, mapping search, RGB drafts, profiles and device controls |
+| `src/profiles.js`, `src/profiles-ui.js` | Native profile codes, shortcut validation, four-slot editor, browser-local names and hardware profile monitoring |
 | `src/advanced.js` | DKS/MPT register encoding and advanced validation |
 | `src/advanced-ui.js` | Advanced-mode editor, DKS phases and macro recording/import/export |
 | `src/settings.js` | Settings/backup trust boundaries, RGB constraints and trigger display model |
@@ -70,6 +71,10 @@ Backups must be validated fully before the first write. Protect physical Fn acce
 ## RGB shortcut evidence
 
 The main-light code table is `src/rgb-shortcuts.js`: `F310` next mode, `F311` direction, `F312/F313` brightness, `F314/F315` speed, `F317` on/off, `F32F` previous mode and `F336` static-light color. The reference is the [AureTrix implementation table at a fixed commit](https://github.com/AureTrix-Solutions/AureTrix_driver/blob/589ee92110d4680f1c1d5d0be4563c4d21a6f057/src/utils/keyMap.ts), not a complete manufacturer firmware specification. A read-only check of the owner's WIN60 HE MAX on 2026-11-08 found F310/F311/F312/F313/F314/F317 already assigned on its Fn layer. No mappings or performance values were written during that check.
+
+The same reference assigns native profile destinations 1–4 to `F108`, `F109`, `F10A`, `F10C`. **`F10B` swaps WASD; it is not profile 4.** `installProfileShortcuts` preflights all four slots for Fn/advanced conflicts, writes and verifies selected mappings, saves each slot, then restores and reads the original slot in `finally`. Installation can partially complete on transport/save failures; it is not a transaction. Browser tests model separate volatile and saved slot contents and simulate native shortcut selection. They validate protocol/UI integration, not physical firmware shortcut behavior.
+
+Profile names use the browser-local `studio-profile-names-1ca2-1902` array. User text is excluded from translation and rendered as text. RGB is always read from hardware, rather than inferred from saved names. The quick editor replaces the palette only when a lighting input changes; name-only saves preserve custom lighting. Profile polling starts every two seconds only while visible, connected, idle and outside calibration/live sensor capture. The query uses the SDK transport queue without disabling controls; a detected profile change refreshes through the shared operation lock only if the UI is still idle.
 
 Browser/SDK tests verify encoding and readback for all nine assignments. Physical remapped behavior remains unverified, especially previous-mode and static-light color. Do not infer behavioral support from a successful register readback. Keep unknown vendor codes intact, and do not add ambient-light or unrelated vendor actions without model-specific evidence.
 

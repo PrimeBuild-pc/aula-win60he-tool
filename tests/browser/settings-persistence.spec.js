@@ -100,7 +100,7 @@ test('profile selection and calibration completion request a persistent save', a
   await expect(page.locator('#profileSeg [data-profile="1"]')).toBeDisabled();
   await expect(page.locator('#toast')).toHaveText('Profilo hardware selezionato');
   const count = await page.evaluate(() => window.__keyboardFixture.saveCount);
-  expect(count).toBe(1);
+  expect(count).toBe(2); // Preserve the source slot before switching, then persist the destination.
   await page.locator('#btnCalibrationStart').click();
   await expect(page.locator('#btnCalibrationEnd')).toBeEnabled();
   expect(await page.evaluate(() => window.__keyboardFixture.saveCount)).toBe(count);

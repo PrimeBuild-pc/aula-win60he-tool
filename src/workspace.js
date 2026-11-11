@@ -304,7 +304,7 @@ export function initWorkspace({ aula, ui, task, toast, log, renderAll, renderKey
   });
   $('profileSeg').addEventListener('click', e => {
     const b = e.target.closest('button'); if (!b || b.disabled) return;
-    task(b, async () => { await aula.switchProfile(Number(b.dataset.profile)); await refresh(); ui.followPerf = null; }, 'Profilo hardware selezionato', { persist: true });
+    ui.activateProfile?.(Number(b.dataset.profile), b);
   });
   $('btnCalibrationStart').addEventListener('click', () => task($('btnCalibrationStart'), async () => {
     // SDK 1.0.24 returns null for a valid generic ACK; transport errors return Error.

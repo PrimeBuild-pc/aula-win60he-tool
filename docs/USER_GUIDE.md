@@ -167,7 +167,13 @@ The binding metadata is read back. The original event sequence is retained in br
 
 ## Profiles, polling and device settings
 
-The device must report onboard profile support before profile controls are enabled. Switching profiles re-reads settings. Export a backup for each profile you want to keep.
+Open **Profiles** to customize the four onboard slots. Select a slot, enter a game or profile name, choose a color, effect, brightness and speed, then press **Save profile**. Each slot keeps its own mapping, performance settings and RGB. Use **Game presets**, **Mapping** and **Advanced RGB** to refine the active slot. Renaming alone preserves existing per-key lighting; changing the profile color or effect replaces that slot's lighting. Profile names are stored in this browser; hardware settings stay on the keyboard.
+
+The profile selector at the top works from any page. The status strip shows the active profile name and its current RGB color. Studio reads the hardware profile while visible and refreshes settings when a keyboard shortcut changes it. A browser refresh retains saved names. Export a backup for each profile you want to keep; hardware backups do not include browser-local names.
+
+Under **Switch profiles from the keyboard**, choose the Base or Fn layer and a physical key for each destination. **Use Fn + 1 / 2 / 3 / 4** prepares the four shortcuts without writing anything. **Save shortcuts in all 4 profiles** installs the selected bindings in every slot and returns to the original profile. Existing assignments on the chosen keys and layer are replaced; unselected keys are preserved. Choosing **Leave unchanged** does not remove an existing binding. To remove one, edit that key in **Mapping**. Fn, duplicate assignments and keys with advanced actions are protected. Advanced conflicts are checked in every slot before the first mapping write. If a later USB/write error interrupts installation, some slots may already contain the shortcuts; reconnect and retry to complete them.
+
+The device must report onboard profile support before profile controls are enabled. Native shortcuts are intended to work with the browser closed; their codes come from the KB2 reference driver and still require physical validation on your keyboard. Switching profiles re-reads settings. If a save fails, the editor remains retryable and Studio does not show a saved confirmation.
 
 Polling options range from 125 Hz to 8 kHz. The displayed value comes from a firmware setting, not an independent measurement of USB report frequency. Use a direct USB connection; reconnect if changing the rate or profile interrupts the device.
 

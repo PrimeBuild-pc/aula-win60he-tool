@@ -84,6 +84,7 @@
           <button data-view="overview" class="active"><span class="ico">◎</span>Panoramica</button>
           <button data-view="keymap"><span class="ico">⌨</span>Mappatura</button>
           <button data-view="perf"><span class="ico">⇅</span>Prestazioni</button>
+          <button data-view="profiles"><span class="ico" aria-hidden="true">▤</span>Profili</button>
           <button data-view="rgb"><span class="ico">◈</span>Illuminazione RGB</button>
           <button data-view="socd"><span class="ico">⇄</span>SOCD</button>
           <button data-view="advanced"><span class="ico">⌘</span>Tasti avanzati</button>
@@ -106,11 +107,38 @@
         <div class="topbar">
           <span class="eyebrow">WORKSPACE <span class="topbar-divider">/</span> WIN60 HE MAX</span>
           <div class="topbar-controls">
+            <label class="compact-label">Profilo<select id="quickProfile" aria-label="Profilo attivo" data-i18n-skip></select></label>
             <label class="compact-label">Tema<select id="themeSelect" aria-label="Tema"><option value="system">Sistema</option><option value="dark">Scuro</option><option value="light">Chiaro</option></select></label>
             <label class="compact-label">Lingua<select id="languageSelect" aria-label="Lingua"><option value="it" lang="it">Italiano</option><option value="en" lang="en">English</option><option value="ru" lang="ru">Русский</option><option value="es" lang="es">Español</option><option value="ja" lang="ja">日本語</option></select></label>
           </div>
         </div>
         <div id="connectionHint" class="connection-hint"><span class="connection-dot"></span><span>Esplora il tuo setup. Collega la tastiera per leggere e salvare le impostazioni.</span><button data-go="settings" class="text-button">Come funziona ↗</button></div>
+        <div class="profile-indicator" role="status"><span id="activeProfileDot" aria-hidden="true"></span><span id="profileActiveStatus">Profilo attivo</span><strong id="profileActiveName" data-i18n-skip>—</strong><button data-go="profiles" class="text-button">Gestisci profili</button></div>
+        <section class="view" data-view="profiles">
+          <header class="view-head"><h1>Profili</h1><p>Un setup per ogni gioco. Cambia profilo, riconoscilo dal colore e continua a giocare.</p></header>
+          <article class="card"><h2>I tuoi quattro profili</h2><p class="hint">Ogni slot conserva mappatura, prestazioni e RGB nella tastiera. Seleziona un profilo per modificarlo.</p><div id="profileCards" class="profile-cards"></div><p class="hint mt">I nomi sono salvati in questo browser. Impostazioni RGB e scorciatoie sono salvate nella tastiera.</p></article>
+          <div class="grid2">
+            <article class="card"><h2>Personalizza il profilo attivo</h2>
+              <fieldset id="profileEditor"><div class="fields">
+                <label>Nome del gioco o profilo<input id="profileName" type="text" maxlength="40" placeholder="Es. VALORANT, Fortnite, Lavoro" /></label>
+                <label>Colore del profilo<input id="profileColor" type="color" value="#5eead4" /></label>
+                <label>Effetto RGB<select id="profileEffect"><option value="0">Colore statico</option></select></label>
+                <label>Luminosità <output id="profileBrightnessOut">100%</output><input id="profileBrightness" type="range" min="0" max="4" value="4" /></label>
+                <label>Velocità <output id="profileSpeedOut">3 / 5</output><input id="profileSpeed" type="range" min="0" max="4" value="2" /></label>
+              </div><div id="profileColorPreview" class="profile-color-preview" aria-hidden="true"></div></fieldset>
+              <p class="hint">Modificare colore o effetto sostituisce gli RGB del profilo attivo. Per una palette o colori per tasto usa Illuminazione RGB.</p>
+              <div class="row"><button id="btnProfileSave" class="primary" data-needs-device>Salva profilo</button><button id="btnProfileReload" data-needs-device>Annulla bozza</button><button data-go="rgb">RGB avanzati</button><button data-go="perf">Preset per gioco</button></div>
+              <p id="profileDraftStatus" class="hint mt" role="status"></p>
+            </article>
+            <article class="card"><h2>Cambia profilo dalla tastiera</h2><p class="hint">Assegna un tasto a ogni profilo. Le scorciatoie hardware funzionano anche con il WebDriver chiuso.</p>
+              <fieldset id="profileShortcutEditor"><label>Layer scorciatoie<select id="profileShortcutLayer"><option value="1">Fn + tasto</option><option value="0">Tasto diretto · Base</option></select></label><div id="profileShortcutRows" class="fields"></div><button id="btnProfileShortcutDefaults">Usa Fn + 1 / 2 / 3 / 4</button></fieldset>
+              <p class="hint mt">Salva le assegnazioni scelte in tutti e quattro gli slot, sostituendo le funzioni di quei tasti sul layer scelto. Fn e i tasti con azioni avanzate sono protetti. Non modificare lascia invariata la mappatura.</p>
+              <button id="btnProfileShortcuts" class="primary" data-needs-device>Salva scorciatoie nei 4 profili</button>
+              <p id="profileShortcutStatus" class="hint mt" role="status"></p>
+              <p class="hint mt">Il WebDriver aggiorna il profilo visibile mentre è aperto. Verifica le scorciatoie sulla tua tastiera dopo il salvataggio.</p>
+            </article>
+          </div>
+        </section>
         <!-- Panoramica -->
         <section class="view active" data-view="overview">
           <header class="view-head">

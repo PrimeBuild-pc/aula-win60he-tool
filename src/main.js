@@ -5,6 +5,7 @@ import { initWorkspace } from './workspace.js';
 import { completeFnLayout } from './fn-layout.js';
 import { RGB_COMMANDS, RGB_DESCRIPTIONS, RGB_SUGGESTIONS } from './rgb-shortcuts.js';
 import { initGamePresets } from './presets-ui.js';
+import { initProfiles } from './profiles-ui.js';
 
 const $ = (id) => document.getElementById(id);
 const MAX_TRAVEL = 3.4;
@@ -101,6 +102,7 @@ function setButtons() {
   $('btnEntryConnect').disabled = ui.busy || !AulaKeyboard.isSupported();
   $('btnEntryConnect').querySelector('span').textContent = ui.busy ? 'Connessione e lettura…' : 'Connetti la tua tastiera';
   ui.syncPresetState?.();
+  ui.syncProfileState?.();
   for (const [id, matches] of Object.entries(ui.applyChecks)) {
     const applied = ui.connected && !ui.saveUnconfirmed && matches();
     $(id).disabled ||= applied;
@@ -818,6 +820,7 @@ if (!AulaKeyboard.isSupported()) {
 
 initWorkspace({ aula, ui, task, toast, log, renderAll, renderKeymap, drawKeyboard, physicalRows, mapOf, refresh, setButtons, setStatus, stopLive, openMapEditor });
 initGamePresets({ aula, ui, task, renderAll, setButtons });
+initProfiles({ aula, ui, task, refresh, renderAll, setButtons, toast });
 drawDiagram();
 renderAll();
 setButtons();

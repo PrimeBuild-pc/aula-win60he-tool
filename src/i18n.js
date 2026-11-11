@@ -64,7 +64,7 @@ export function initLanguage(preferences) {
     const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
     while (walker.nextNode()) {
       const node = walker.currentNode;
-      if (!node.textContent.trim() || node.parentElement?.closest('script, style, #log, #keyLog, #languageSelect')) continue;
+      if (!node.textContent.trim() || node.parentElement?.closest('script, style, #log, #keyLog, #languageSelect, [data-i18n-skip]')) continue;
       const old = nodes.get(node);
       const source = old && node.textContent === old.rendered ? old.source : node.textContent;
       const rendered = translate(source, select.value);
