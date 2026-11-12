@@ -147,6 +147,12 @@ Or run `npm run check` after installing Playwright Chromium. CI performs the tes
 
 [Open an issue](https://github.com/PrimeBuild-pc/aula-win60he-tool/issues/new?template=bug_report.yml) with your model, USB IDs, browser, firmware/protocol and reproduction steps. Please distinguish an on-screen success message, a USB readback and an observed physical result. Translation improvements and hardware evidence are welcome; see [CONTRIBUTING.md](CONTRIBUTING.md).
 
+## Support the project
+
+aula-win60he-tool is free and open source. If it helps you, you can support its development:
+
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/Y6U02AIRB8) [![PayPal](https://img.shields.io/badge/Support-PayPal-0070BA?logo=paypal&logoColor=white)](https://paypal.me/PrimeBuildOfficial)
+
 ## License and attribution
 
 [MIT](LICENSE). Built with `@sparklinkplayjoy/sdk-keyboard` and the SparkLink KB2 protocol. This project is not affiliated with or endorsed by AULA or SparkLink. Product names belong to their respective owners.
