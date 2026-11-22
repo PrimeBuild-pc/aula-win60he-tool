@@ -12,7 +12,7 @@
     "check": "npm test && npm run build && npm run test:e2e"
   },
   "dependencies": {
-    "@sparklinkplayjoy/sdk-keyboard": "1.0.24"
+    "@sparklinkplayjoy/sdk-keyboard": "1.0.25"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.14.0",
